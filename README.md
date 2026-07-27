@@ -83,7 +83,6 @@ Repository นี้มีไฟล์ Roblox Studio สำหรับตรว
 
 โมเดลศาลไทยใน repository สร้างแบบ procedural ด้วย Blender และส่งออกเป็น `.blend` กับ `.glb` เพื่อใช้เป็นแนวทางสำหรับสภาพแวดล้อมและฉากพิธีกรรม
 
-![Thai spirit house interior concept](output/renders/spirit_house_interior.png)
 
 ## คำเตือนเนื้อหา
 
