@@ -8,7 +8,6 @@ _เมื่อทุกอย่างไม่ได้เป็นอย่�
 
 </div>
 
-![Thai spirit house concept](output/renders/spirit_house_front.png)
 
 > **KARMA** อยู่ระหว่างการพัฒนา เนื้อหา ระบบ และภาพที่แสดงใน repository นี้อาจเปลี่ยนแปลงได้
 
