@@ -1,0 +1,31 @@
+return {
+	Flashlight = {
+		Id = "Flashlight",
+		Name = "Flashlight",
+		Width = 2,
+		Height = 1,
+		Rotatable = true,
+		Stackable = false,
+		Type = "Tool",
+		MaxStack = 1,
+		MaxOwned = 1,
+		Weight = 1.2,
+		Tags = { "Utility", "Light" },
+	},
+
+	Jada = {
+		Id = "Jada",
+		Name = "Jaday",
+		Width = 3,
+		Height = 3,
+		Rotatable = false,
+		Stackable = false,
+		Type = "Quest",
+		MaxStack = 1,
+		MaxOwned = 1,
+		MaxGlobalOwned = 1,
+		AllowPickupAfterPlace = false,
+		Weight = 0.1,
+		Tags = { "Quest" },
+	},
+}
