@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "Dossier secret",
-	["notes.note_1.body"] = [[Bonjour a la personne qui trouvera cette lettre.
+	["notes.note_0.title"] = "Note de test systeme",
+	["notes.note_0.body"] = [[Bonjour a la personne qui trouvera cette lettre.
 
 J'ecris ce message pour te raconter ce qui s'est passe
 le jour ou tout a change...
@@ -10,6 +10,19 @@ Si tu lis ceci, c'est que tu as deja trouve la feuille.
 N'oublie pas que tout n'est pas toujours ce qu'il semble etre.
 
 - L'Auteur]],
+	["notes.note_1.title"] = "Lettre sur la chaine",
+	["notes.note_1.body"] = [[Win,
+
+Si tu es devant le portail de l'ecole, n'entre pas encore dans les batiments.
+Va d'abord au sanctuaire des grands-parents derriere la cantine.
+
+J'ai enterre le telephone dans la terre qui parait plus propre que le reste.
+Deterre-le, ouvre le dernier message, puis suis-le.
+
+Avant que cette ecole soit detruite, tout doit etre lu.
+Surtout ce que nous nous repetions comme si ca ne nous concernait pas.
+
+- Celle qui s'occupait autrefois de la radio de l'ecole]],
 
 	["note.ui.read_text"] = "Lire le texte",
 	["note.ui.view_handwriting"] = "Voir l'ecriture manuscrite",

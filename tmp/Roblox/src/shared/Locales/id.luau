@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "Catatan Rahasia",
-	["notes.note_1.body"] = [[Halo untuk siapa pun yang menemukan surat ini.
+	["notes.note_0.title"] = "Catatan Tes Sistem",
+	["notes.note_0.body"] = [[Halo untuk siapa pun yang menemukan surat ini.
 
 Aku menulis pesan ini untuk memberitahumu apa yang terjadi
 pada hari ketika semuanya berubah...
@@ -10,6 +10,19 @@ Jika kamu membaca ini, berarti kamu sudah menemukan kertas itu.
 Tolong ingat bahwa tidak semua hal seperti yang terlihat.
 
 - Penulis]],
+	["notes.note_1.title"] = "Surat di Rantai",
+	["notes.note_1.body"] = [[Win,
+
+Kalau kamu sudah sampai di gerbang sekolah, jangan masuk ke gedung dulu.
+Pergilah ke kuil kakek-nenek di belakang kantin.
+
+Aku mengubur telepon di tanah yang terlihat lebih bersih dari sekitarnya.
+Gali telepon itu, buka pesan terbaru, lalu ikuti.
+
+Sebelum sekolah ini dihancurkan, semuanya harus dibaca.
+Terutama bagian yang selalu kita bilang tidak ada hubungannya dengan kita.
+
+- Orang yang dulu mengurus siaran sekolah]],
 
 	["note.ui.read_text"] = "Baca Teks",
 	["note.ui.view_handwriting"] = "Lihat Tulisan Tangan",

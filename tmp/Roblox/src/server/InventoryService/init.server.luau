@@ -7,6 +7,13 @@ local Workspace = game:GetService("Workspace")
 print("[InventoryService] Boot")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("InventoryService", script) then
+	return
+end
+
 local InventoryShared = Shared:WaitForChild("InventoryShared")
 local Config = require(InventoryShared:WaitForChild("Config"))
 local GridUtils = require(InventoryShared:WaitForChild("GridUtils"))
@@ -1323,3 +1330,5 @@ for _, instance in Workspace:GetDescendants() do
 		InventoryService:connectWorldTool(instance)
 	end
 end
+
+SystemHub.ready("InventoryService", script)

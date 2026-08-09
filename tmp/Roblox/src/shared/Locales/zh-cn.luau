@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "秘密记录",
-	["notes.note_1.body"] = [[致找到这封信的人：
+	["notes.note_0.title"] = "系统测试纸条",
+	["notes.note_0.body"] = [[致找到这封信的人：
 
 我写下这段话，是想告诉你那一天发生了什么，
 那一天，一切都改变了……
@@ -10,6 +10,19 @@ return {
 请记住，事情并不总是表面看起来的那样。
 
 - 写信人]],
+	["notes.note_1.title"] = "夹在铁链上的信",
+	["notes.note_1.body"] = [[文，
+
+如果你已经到了学校大门，先不要进教学楼。
+先去食堂后面的祖父母神龛。
+
+我把手机埋在那块比周围都干净的土里。
+把它挖出来，打开最新的信息，然后照着做。
+
+在这所学校被拆掉之前，所有东西都必须被读完。
+尤其是那些我们一直说和自己无关的事。
+
+- 曾经负责学校广播的人]],
 
 	["note.ui.read_text"] = "阅读正文",
 	["note.ui.view_handwriting"] = "查看手写原稿",

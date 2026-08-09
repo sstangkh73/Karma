@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "Registro secreto",
-	["notes.note_1.body"] = [[Hola a quien encuentre esta carta.
+	["notes.note_0.title"] = "Nota de prueba del sistema",
+	["notes.note_0.body"] = [[Hola a quien encuentre esta carta.
 
 Escribo este mensaje para contarte lo que paso
 el dia en que todo cambio...
@@ -10,6 +10,19 @@ Si estas leyendo esto, entonces ya encontraste el papel.
 Por favor, recuerda que no todo es lo que parece.
 
 - El Autor]],
+	["notes.note_1.title"] = "Carta en la cadena",
+	["notes.note_1.body"] = [[Win,
+
+Si estas en la puerta de la escuela, no entres todavia a los edificios.
+Ve primero al santuario de los abuelos detras de la cafeteria.
+
+Enterre el telefono en la tierra que se ve mas limpia que todo lo demas.
+Desentierralo, abre el mensaje mas reciente y siguelo.
+
+Antes de que derriben esta escuela, todo tiene que leerse.
+Sobre todo aquello que seguimos diciendonos que no tenia nada que ver con nosotros.
+
+- Quien antes manejaba la radio escolar]],
 
 	["note.ui.read_text"] = "Leer texto",
 	["note.ui.view_handwriting"] = "Ver manuscrito",

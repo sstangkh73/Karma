@@ -12,6 +12,9 @@ local CONFIG = {
 	RemotesFolderName = "GameRemotes",
 	RemoteName = "ObjectiveEvent",
 	ServerApiFolderName = "ObjectiveServerApi",
+	SingleObjectiveChannels = {
+		Quest = true,
+	},
 }
 
 local ObjectiveService = {
@@ -103,6 +106,14 @@ function ObjectiveService:upsertObjective(player: Player, payload)
 	end
 
 	local bucket = getPlayerBucket(self, player)
+	if CONFIG.SingleObjectiveChannels[objective.Channel] == true then
+		for objectiveId, existingObjective in pairs(bucket) do
+			if existingObjective.Channel == objective.Channel and objectiveId ~= objective.Id then
+				bucket[objectiveId] = nil
+			end
+		end
+	end
+
 	bucket[objective.Id] = objective
 	self:syncPlayer(player)
 	return true, objective

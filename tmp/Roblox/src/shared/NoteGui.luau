@@ -40,7 +40,8 @@ function NoteGui.create()
 	local noteFrame = Instance.new("Frame")
 	noteFrame.Name = "NoteFrame"
 	noteFrame.Size = UDim2.new(0, 500, 0, 650)
-	noteFrame.Position = UDim2.new(0.5, -250, 0.5, -325)
+	noteFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	noteFrame.Position = UDim2.fromScale(0.5, 0.5)
 	noteFrame.BackgroundColor3 = Color3.fromRGB(245, 235, 210)
 	noteFrame.BorderSizePixel = 0
 	noteFrame.ZIndex = 2
@@ -50,16 +51,29 @@ function NoteGui.create()
 	corner.CornerRadius = UDim.new(0, 8)
 	corner.Parent = noteFrame
 
-	-- รูปภาพลายมือ
+	local imageViewport = Instance.new("Frame")
+	imageViewport.Name = "ImageViewport"
+	imageViewport.Size = UDim2.new(1, -28, 1, -70)
+	imageViewport.Position = UDim2.fromOffset(14, 14)
+	imageViewport.BackgroundColor3 = Color3.fromRGB(24, 22, 19)
+	imageViewport.BackgroundTransparency = 0.08
+	imageViewport.BorderSizePixel = 0
+	imageViewport.ClipsDescendants = true
+	imageViewport.Active = true
+	imageViewport.ZIndex = 3
+	imageViewport.Parent = noteFrame
+
+	-- รูปโน้ตอยู่ใน viewport เพื่อรองรับการซูมและลาก
 	local handwritingLayer = Instance.new("ImageLabel")
 	handwritingLayer.Name = "HandwritingLayer"
-	handwritingLayer.Size = UDim2.new(1, -40, 1, -80)
-	handwritingLayer.Position = UDim2.new(0, 20, 0, 20)
+	handwritingLayer.Size = UDim2.fromScale(1, 1)
+	handwritingLayer.AnchorPoint = Vector2.new(0.5, 0.5)
+	handwritingLayer.Position = UDim2.fromScale(0.5, 0.5)
 	handwritingLayer.BackgroundTransparency = 1
 	handwritingLayer.ScaleType = Enum.ScaleType.Fit
-	handwritingLayer.ZIndex = 3
+	handwritingLayer.ZIndex = 4
 	handwritingLayer.Image = ""
-	handwritingLayer.Parent = noteFrame
+	handwritingLayer.Parent = imageViewport
 
 	-- ปุ่มสลับไปชั้น 2 (อยู่ในกรอบกระดาษ)
 	local toggleButton = Instance.new("TextButton")
@@ -73,11 +87,52 @@ function NoteGui.create()
 	toggleButton.TextColor3 = Color3.new(1, 1, 1)
 	toggleButton.Text = ""
 	toggleButton.ZIndex = 5
+	toggleButton.Visible = false
 	toggleButton.Parent = noteFrame
 
 	local toggleCorner = Instance.new("UICorner")
 	toggleCorner.CornerRadius = UDim.new(0, 6)
 	toggleCorner.Parent = toggleButton
+
+	local zoomControls = Instance.new("Frame")
+	zoomControls.Name = "ZoomControls"
+	zoomControls.Size = UDim2.fromOffset(184, 40)
+	zoomControls.AnchorPoint = Vector2.new(0.5, 1)
+	zoomControls.Position = UDim2.new(0.5, 0, 1, -10)
+	zoomControls.BackgroundColor3 = Color3.fromRGB(35, 31, 26)
+	zoomControls.BackgroundTransparency = 0.08
+	zoomControls.BorderSizePixel = 0
+	zoomControls.ZIndex = 5
+	zoomControls.Parent = noteFrame
+
+	local zoomCorner = Instance.new("UICorner")
+	zoomCorner.CornerRadius = UDim.new(0, 6)
+	zoomCorner.Parent = zoomControls
+
+	local function createZoomButton(name: string, text: string, x: number, width: number)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.Size = UDim2.fromOffset(width, 32)
+		button.Position = UDim2.fromOffset(x, 4)
+		button.BackgroundColor3 = Color3.fromRGB(69, 62, 51)
+		button.BorderSizePixel = 0
+		button.Font = Enum.Font.GothamBold
+		button.TextSize = 16
+		button.TextColor3 = Color3.fromRGB(245, 240, 225)
+		button.Text = text
+		button.ZIndex = 6
+		button.Parent = zoomControls
+
+		local buttonCorner = Instance.new("UICorner")
+		buttonCorner.CornerRadius = UDim.new(0, 5)
+		buttonCorner.Parent = button
+
+		return button
+	end
+
+	local zoomOutButton = createZoomButton("ZoomOutButton", "-", 4, 40)
+	local zoomResetButton = createZoomButton("ZoomResetButton", "100%", 48, 88)
+	local zoomInButton = createZoomButton("ZoomInButton", "+", 140, 40)
 
 	-- ปุ่มปิด (ชั้น 1)
 	local closeButton = Instance.new("TextButton")
@@ -191,6 +246,7 @@ function NoteGui.create()
 	backButton.TextColor3 = Color3.fromRGB(200, 200, 200)
 	backButton.Text = ""
 	backButton.ZIndex = 12
+	backButton.Visible = false
 	backButton.Parent = bottomBar
 
 	local backCorner = Instance.new("UICorner")
@@ -201,7 +257,7 @@ function NoteGui.create()
 	local closeButton2 = Instance.new("TextButton")
 	closeButton2.Name = "CloseButton2"
 	closeButton2.Size = UDim2.new(0, 160, 0, 36)
-	closeButton2.Position = UDim2.new(0.5, 10, 0.5, -18)
+	closeButton2.Position = UDim2.new(0.5, -80, 0.5, -18)
 	closeButton2.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
 	closeButton2.BackgroundTransparency = 0.3
 	closeButton2.BorderSizePixel = 0
@@ -245,9 +301,14 @@ function NoteGui.create()
 		-- ชั้น 1
 		Overlay = overlay,
 		NoteFrame = noteFrame,
+		ImageViewport = imageViewport,
 		HandwritingLayer = handwritingLayer,
 		ToggleButton = toggleButton,
 		CloseButton = closeButton,
+		ZoomControls = zoomControls,
+		ZoomOutButton = zoomOutButton,
+		ZoomResetButton = zoomResetButton,
+		ZoomInButton = zoomInButton,
 		-- ชั้น 2
 		TextOverlay = textOverlay,
 		TitleLabel = titleLabel,

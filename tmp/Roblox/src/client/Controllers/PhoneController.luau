@@ -12,6 +12,7 @@ local Localization = require(Shared:WaitForChild("Localization"))
 local PhoneConfig = require(Shared:WaitForChild("PhoneConfig"))
 local NoteJournal = require(Shared:WaitForChild("NoteJournal"))
 local NoteReader = require(Shared:WaitForChild("NoteReader"))
+local Theme = require(Shared:WaitForChild("UITheme"))
 
 local UI_CONFIG = PhoneConfig.UI
 local MAP_CONFIG = PhoneConfig.Map
@@ -50,19 +51,11 @@ local function t(key: string, params)
 end
 
 local function createCorner(parent: Instance, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = parent
-	return corner
+	return Theme.addCorner(parent, radius)
 end
 
 local function createStroke(parent: Instance, color: Color3, transparency: number?, thickness: number?)
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = color
-	stroke.Transparency = transparency or 0
-	stroke.Thickness = thickness or 1
-	stroke.Parent = parent
-	return stroke
+	return Theme.addStroke(parent, color, transparency, thickness)
 end
 
 local function isScreenPointInside(guiObject: GuiObject?, point: Vector2): boolean
@@ -112,7 +105,7 @@ local function getMarkerColor(instance: Instance): Color3
 		return color
 	end
 
-	return Color3.fromRGB(255, 213, 94)
+	return Theme.Colors.BrassBright
 end
 
 local function isMapMarker(instance: Instance): boolean
@@ -296,12 +289,12 @@ local function createMarker(marker, offset: Vector2, mapSize: Vector2)
 	label.AnchorPoint = Vector2.new(0.5, 0)
 	label.Position = UDim2.new(0.5, 0, 0, 0)
 	label.Size = UDim2.fromOffset(92, 20)
-	label.BackgroundColor3 = Color3.fromRGB(16, 19, 25)
+	label.BackgroundColor3 = Theme.Colors.Surface
 	label.BackgroundTransparency = 0.06
 	label.BorderSizePixel = 0
-	label.Font = Enum.Font.GothamBold
+	label.Font = Theme.Fonts.BodyStrong
 	label.Text = marker.Name
-	label.TextColor3 = Color3.fromRGB(245, 247, 252)
+	label.TextColor3 = Theme.Colors.Ivory
 	label.TextSize = 11
 	label.TextTruncate = Enum.TextTruncate.AtEnd
 	label.ZIndex = 27
@@ -393,8 +386,8 @@ end
 
 local function setDiaryPage(pageUi, entry, entryIndex: number?)
 	local hasEntry = entry ~= nil
-	pageUi.Frame.BackgroundColor3 = if hasEntry then Color3.fromRGB(248, 239, 222) else Color3.fromRGB(235, 227, 214)
-	pageUi.Stroke.Color = if hasEntry then Color3.fromRGB(168, 104, 54) else Color3.fromRGB(168, 145, 118)
+	pageUi.Frame.BackgroundColor3 = if hasEntry then Theme.Colors.PaperLight else Theme.Colors.Paper
+	pageUi.Stroke.Color = if hasEntry then Theme.Colors.Brass else Theme.Colors.PaperShadow
 	pageUi.Stroke.Transparency = if hasEntry then 0.2 else 0.48
 	pageUi.Highlight.BackgroundTransparency = if hasEntry then 0.84 else 0.95
 	pageUi.Highlight.Visible = hasEntry
@@ -460,15 +453,15 @@ function PhoneController:refreshDiaryList()
 		tab.Name = "DiaryBookmark"
 		tab.Size = UDim2.fromOffset(78, if index % 2 == 0 then 30 else 26)
 		tab.BackgroundColor3 = if entry.id == state.diarySelectedNoteId
-			then Color3.fromRGB(169, 103, 56)
-			else Color3.fromRGB(132, 91, 58)
+			then Theme.Colors.Brass
+			else Theme.Colors.BrassDark
 		tab.BorderSizePixel = 0
 		tab.AutoButtonColor = false
 		tab.LayoutOrder = index
 		tab.Text = entry.title ~= "" and entry.title or t("phone.diary.tab.note", { index = string.format("%02d", index) })
-		tab.TextColor3 = Color3.fromRGB(250, 241, 225)
+		tab.TextColor3 = Theme.Colors.PaperLight
 		tab.TextSize = 10
-		tab.Font = Enum.Font.GothamBold
+		tab.Font = Theme.Fonts.BodyStrong
 		tab.TextTruncate = Enum.TextTruncate.AtEnd
 		tab.TextXAlignment = Enum.TextXAlignment.Left
 		tab.TextYAlignment = Enum.TextYAlignment.Center
@@ -485,7 +478,7 @@ function PhoneController:refreshDiaryList()
 		stitch.Name = "Stitch"
 		stitch.Size = UDim2.new(1, -18, 0, 2)
 		stitch.Position = UDim2.new(0, 9, 1, -7)
-		stitch.BackgroundColor3 = Color3.fromRGB(243, 221, 197)
+		stitch.BackgroundColor3 = Theme.Colors.PaperLight
 		stitch.BackgroundTransparency = 0.32
 		stitch.BorderSizePixel = 0
 		stitch.ZIndex = 24
@@ -657,28 +650,33 @@ function PhoneController:createAppButton(appInfo, index: number)
 	local button = Instance.new("TextButton")
 	button.Name = appInfo.Id .. "Button"
 	button.Size = UDim2.fromOffset(58, 70)
-	button.BackgroundTransparency = 1
+	button.BackgroundColor3 = Theme.Colors.SurfaceRaised
+	button.BackgroundTransparency = 0.18
 	button.AutoButtonColor = false
 	button.Text = ""
 	button.LayoutOrder = index
 	button.ZIndex = 20
 	button.Parent = ui.appGrid
+	createCorner(button, 14)
+	createStroke(button, Theme.Colors.Line, 0.52)
 
 	local icon = Instance.new("Frame")
 	icon.Name = "Icon"
-	icon.Size = UDim2.fromOffset(50, 50)
-	icon.Position = UDim2.fromOffset(4, 0)
+	icon.Size = UDim2.fromOffset(42, 42)
+	icon.Position = UDim2.fromOffset(8, 6)
 	icon.BackgroundColor3 = appInfo.Accent
+	icon.BackgroundTransparency = 0.12
 	icon.BorderSizePixel = 0
 	icon.ZIndex = 21
 	icon.Parent = button
-	createCorner(icon, 12)
+	createCorner(icon, 10)
+	createStroke(icon, Theme.Colors.Ivory, 0.72)
 
 	if appInfo.Id == "Diary" then
 		local spine = Instance.new("Frame")
 		spine.Name = "Spine"
 		spine.Size = UDim2.new(0, 8, 1, 0)
-		spine.BackgroundColor3 = Color3.fromRGB(126, 76, 41)
+		spine.BackgroundColor3 = Theme.Colors.BrassDark
 		spine.BorderSizePixel = 0
 		spine.ZIndex = 22
 		spine.Parent = icon
@@ -688,7 +686,7 @@ function PhoneController:createAppButton(appInfo, index: number)
 		page.Name = "Page"
 		page.Size = UDim2.new(1, -14, 1, -12)
 		page.Position = UDim2.fromOffset(10, 6)
-		page.BackgroundColor3 = Color3.fromRGB(247, 238, 220)
+		page.BackgroundColor3 = Theme.Colors.PaperLight
 		page.BorderSizePixel = 0
 		page.ZIndex = 22
 		page.Parent = icon
@@ -699,7 +697,7 @@ function PhoneController:createAppButton(appInfo, index: number)
 			line.Name = "Line"
 			line.Size = UDim2.new(1, -10, 0, 2)
 			line.Position = UDim2.new(0, 5, 0, 9 + ((lineIndex - 1) * 10))
-			line.BackgroundColor3 = Color3.fromRGB(199, 178, 148)
+			line.BackgroundColor3 = Theme.Colors.PaperShadow
 			line.BackgroundTransparency = 0.15
 			line.BorderSizePixel = 0
 			line.ZIndex = 23
@@ -712,7 +710,7 @@ function PhoneController:createAppButton(appInfo, index: number)
 		bookmark.AnchorPoint = Vector2.new(1, 0)
 		bookmark.Position = UDim2.new(1, -4, 0, 0)
 		bookmark.Size = UDim2.fromOffset(9, 16)
-		bookmark.BackgroundColor3 = Color3.fromRGB(190, 54, 54)
+		bookmark.BackgroundColor3 = Theme.Colors.Crimson
 		bookmark.BorderSizePixel = 0
 		bookmark.ZIndex = 24
 		bookmark.Parent = icon
@@ -722,9 +720,9 @@ function PhoneController:createAppButton(appInfo, index: number)
 		iconText.Name = "IconText"
 		iconText.Size = UDim2.fromScale(1, 1)
 		iconText.BackgroundTransparency = 1
-		iconText.Font = Enum.Font.GothamBold
+		iconText.Font = Theme.Fonts.Display
 		iconText.Text = appInfo.Icon
-		iconText.TextColor3 = Color3.fromRGB(255, 255, 255)
+		iconText.TextColor3 = Theme.Colors.Ivory
 		iconText.TextSize = 13
 		iconText.ZIndex = 22
 		iconText.Parent = icon
@@ -732,12 +730,12 @@ function PhoneController:createAppButton(appInfo, index: number)
 
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
-	label.Position = UDim2.fromOffset(0, 53)
+	label.Position = UDim2.fromOffset(0, 51)
 	label.Size = UDim2.fromOffset(58, 16)
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamMedium
+	label.Font = Theme.Fonts.BodyStrong
 	label.Text = appInfo.Name
-	label.TextColor3 = Color3.fromRGB(236, 240, 247)
+	label.TextColor3 = Theme.Colors.Text
 	label.TextSize = 11
 	label.TextTruncate = Enum.TextTruncate.AtEnd
 	label.ZIndex = 21
@@ -753,14 +751,14 @@ function PhoneController:createMapUi()
 	mapCanvas.Name = "MapCanvas"
 	mapCanvas.Position = UDim2.fromOffset(14, 52)
 	mapCanvas.Size = UDim2.new(1, -28, 1, -110)
-	mapCanvas.BackgroundColor3 = Color3.fromRGB(26, 35, 42)
+	mapCanvas.BackgroundColor3 = Theme.Colors.Map
 	mapCanvas.BorderSizePixel = 0
 	mapCanvas.ClipsDescendants = true
 	mapCanvas.Active = true
 	mapCanvas.ZIndex = 18
 	mapCanvas.Parent = ui.appPage
 	createCorner(mapCanvas, 14)
-	createStroke(mapCanvas, Color3.fromRGB(86, 105, 116), 0.25)
+	createStroke(mapCanvas, Theme.Colors.MapGrid, 0.25)
 
 	local mapImage = Instance.new("ImageLabel")
 	mapImage.Name = "MapImage"
@@ -777,7 +775,7 @@ function PhoneController:createMapUi()
 	local grid = Instance.new("Frame")
 	grid.Name = "Grid"
 	grid.Size = UDim2.fromScale(1, 1)
-	grid.BackgroundColor3 = Color3.fromRGB(31, 43, 50)
+	grid.BackgroundColor3 = Theme.Colors.Map
 	grid.BackgroundTransparency = 0.18
 	grid.BorderSizePixel = 0
 	grid.ZIndex = 19
@@ -789,7 +787,7 @@ function PhoneController:createMapUi()
 		vertical.AnchorPoint = Vector2.new(0.5, 0)
 		vertical.Position = UDim2.new(i / 6, 0, 0, 0)
 		vertical.Size = UDim2.new(0, 1, 1, 0)
-		vertical.BackgroundColor3 = Color3.fromRGB(82, 105, 114)
+		vertical.BackgroundColor3 = Theme.Colors.MapGrid
 		vertical.BackgroundTransparency = 0.72
 		vertical.BorderSizePixel = 0
 		vertical.ZIndex = 20
@@ -800,7 +798,7 @@ function PhoneController:createMapUi()
 		horizontal.AnchorPoint = Vector2.new(0, 0.5)
 		horizontal.Position = UDim2.new(0, 0, i / 6, 0)
 		horizontal.Size = UDim2.new(1, 0, 0, 1)
-		horizontal.BackgroundColor3 = Color3.fromRGB(82, 105, 114)
+		horizontal.BackgroundColor3 = Theme.Colors.MapGrid
 		horizontal.BackgroundTransparency = 0.72
 		horizontal.BorderSizePixel = 0
 		horizontal.ZIndex = 20
@@ -819,19 +817,19 @@ function PhoneController:createMapUi()
 	playerDot.AnchorPoint = Vector2.new(0.5, 0.5)
 	playerDot.Position = UDim2.fromScale(0.5, 0.5)
 	playerDot.Size = UDim2.fromOffset(18, 18)
-	playerDot.BackgroundColor3 = Color3.fromRGB(245, 248, 255)
+	playerDot.BackgroundColor3 = Theme.Colors.Ivory
 	playerDot.BorderSizePixel = 0
 	playerDot.ZIndex = 30
 	playerDot.Parent = mapCanvas
 	createCorner(playerDot, 18)
-	createStroke(playerDot, Color3.fromRGB(64, 142, 255), 0, 3)
+	createStroke(playerDot, Theme.Colors.BrassBright, 0, 3)
 
 	local playerDotInner = Instance.new("Frame")
 	playerDotInner.Name = "Inner"
 	playerDotInner.AnchorPoint = Vector2.new(0.5, 0.5)
 	playerDotInner.Position = UDim2.fromScale(0.5, 0.5)
 	playerDotInner.Size = UDim2.fromOffset(6, 6)
-	playerDotInner.BackgroundColor3 = Color3.fromRGB(64, 142, 255)
+	playerDotInner.BackgroundColor3 = Theme.Colors.BrassBright
 	playerDotInner.BorderSizePixel = 0
 	playerDotInner.ZIndex = 31
 	playerDotInner.Parent = playerDot
@@ -841,12 +839,12 @@ function PhoneController:createMapUi()
 	locationLabel.Name = "LocationLabel"
 	locationLabel.Position = UDim2.new(0, 14, 1, -48)
 	locationLabel.Size = UDim2.new(1, -28, 0, 30)
-	locationLabel.BackgroundColor3 = Color3.fromRGB(19, 23, 29)
+	locationLabel.BackgroundColor3 = Theme.Colors.Surface
 	locationLabel.BackgroundTransparency = 0.08
 	locationLabel.BorderSizePixel = 0
-	locationLabel.Font = Enum.Font.GothamMedium
+	locationLabel.Font = Theme.Fonts.BodyStrong
 	locationLabel.Text = "Waiting for character..."
-	locationLabel.TextColor3 = Color3.fromRGB(225, 230, 238)
+	locationLabel.TextColor3 = Theme.Colors.Text
 	locationLabel.TextSize = 12
 	locationLabel.TextXAlignment = Enum.TextXAlignment.Center
 	locationLabel.ZIndex = 24
@@ -950,7 +948,7 @@ function PhoneController:createDiaryUi()
 	bookShadow.Name = "BookShadow"
 	bookShadow.Position = UDim2.fromOffset(4, 34)
 	bookShadow.Size = UDim2.new(1, -8, 1, -48)
-	bookShadow.BackgroundColor3 = Color3.fromRGB(36, 21, 13)
+	bookShadow.BackgroundColor3 = Theme.Colors.Ink
 	bookShadow.BackgroundTransparency = 0.38
 	bookShadow.BorderSizePixel = 0
 	bookShadow.ZIndex = 18
@@ -961,18 +959,18 @@ function PhoneController:createDiaryUi()
 	diaryBook.Name = "DiaryBook"
 	diaryBook.Position = UDim2.fromOffset(0, 28)
 	diaryBook.Size = UDim2.new(1, 0, 1, -44)
-	diaryBook.BackgroundColor3 = Color3.fromRGB(98, 68, 43)
+	diaryBook.BackgroundColor3 = Theme.Colors.BrassDark
 	diaryBook.BorderSizePixel = 0
 	diaryBook.ZIndex = 19
 	diaryBook.Parent = diaryContainer
 	createCorner(diaryBook, 20)
-	createStroke(diaryBook, Color3.fromRGB(206, 183, 148), 0.45)
+	createStroke(diaryBook, Theme.Colors.Brass, 0.38)
 
 	local bookTop = Instance.new("Frame")
 	bookTop.Name = "BookTop"
 	bookTop.Size = UDim2.new(1, -12, 0, 18)
 	bookTop.Position = UDim2.fromOffset(6, 6)
-	bookTop.BackgroundColor3 = Color3.fromRGB(123, 89, 59)
+	bookTop.BackgroundColor3 = Theme.Colors.Brass
 	bookTop.BorderSizePixel = 0
 	bookTop.ZIndex = 20
 	bookTop.Parent = diaryBook
@@ -990,12 +988,12 @@ function PhoneController:createDiaryUi()
 	prevButton.Name = "PrevButton"
 	prevButton.Size = UDim2.fromOffset(30, 24)
 	prevButton.Position = UDim2.fromOffset(0, 0)
-	prevButton.BackgroundColor3 = Color3.fromRGB(136, 97, 63)
+	prevButton.BackgroundColor3 = Theme.Colors.BrassDark
 	prevButton.BorderSizePixel = 0
 	prevButton.AutoButtonColor = false
-	prevButton.Font = Enum.Font.GothamBold
+	prevButton.Font = Theme.Fonts.Display
 	prevButton.Text = "<"
-	prevButton.TextColor3 = Color3.fromRGB(248, 236, 218)
+	prevButton.TextColor3 = Theme.Colors.PaperLight
 	prevButton.TextSize = 14
 	prevButton.ZIndex = 23
 	prevButton.Parent = navigation
@@ -1007,9 +1005,9 @@ function PhoneController:createDiaryUi()
 	spreadCounter.Position = UDim2.new(0.5, 0, 0, 1)
 	spreadCounter.Size = UDim2.fromOffset(82, 22)
 	spreadCounter.BackgroundTransparency = 1
-	spreadCounter.Font = Enum.Font.GothamBold
+	spreadCounter.Font = Theme.Fonts.BodyStrong
 	spreadCounter.Text = "0 / 0"
-	spreadCounter.TextColor3 = Color3.fromRGB(239, 225, 204)
+	spreadCounter.TextColor3 = Theme.Colors.PaperLight
 	spreadCounter.TextSize = 12
 	spreadCounter.ZIndex = 23
 	spreadCounter.Parent = navigation
@@ -1019,12 +1017,12 @@ function PhoneController:createDiaryUi()
 	nextButton.AnchorPoint = Vector2.new(1, 0)
 	nextButton.Position = UDim2.new(1, 0, 0, 0)
 	nextButton.Size = UDim2.fromOffset(30, 24)
-	nextButton.BackgroundColor3 = Color3.fromRGB(136, 97, 63)
+	nextButton.BackgroundColor3 = Theme.Colors.BrassDark
 	nextButton.BorderSizePixel = 0
 	nextButton.AutoButtonColor = false
-	nextButton.Font = Enum.Font.GothamBold
+	nextButton.Font = Theme.Fonts.Display
 	nextButton.Text = ">"
-	nextButton.TextColor3 = Color3.fromRGB(248, 236, 218)
+	nextButton.TextColor3 = Theme.Colors.PaperLight
 	nextButton.TextSize = 14
 	nextButton.ZIndex = 23
 	nextButton.Parent = navigation
@@ -1034,19 +1032,19 @@ function PhoneController:createDiaryUi()
 	pageFrame.Name = "DiaryPage"
 	pageFrame.Position = UDim2.fromOffset(12, 44)
 	pageFrame.Size = UDim2.new(1, -24, 1, -58)
-	pageFrame.BackgroundColor3 = Color3.fromRGB(248, 239, 222)
+	pageFrame.BackgroundColor3 = Theme.Colors.PaperLight
 	pageFrame.BorderSizePixel = 0
 	pageFrame.ZIndex = 22
 	pageFrame.Parent = diaryBook
 	createCorner(pageFrame, 16)
 
-	local pageStroke = createStroke(pageFrame, Color3.fromRGB(168, 145, 118), 0.45)
+	local pageStroke = createStroke(pageFrame, Theme.Colors.PaperShadow, 0.45)
 
 	local highlight = Instance.new("Frame")
 	highlight.Name = "Highlight"
 	highlight.Size = UDim2.new(1, -14, 1, -14)
 	highlight.Position = UDim2.fromOffset(7, 7)
-	highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	highlight.BackgroundColor3 = Theme.Colors.Ivory
 	highlight.BackgroundTransparency = 0.9
 	highlight.BorderSizePixel = 0
 	highlight.ZIndex = 22
@@ -1057,7 +1055,7 @@ function PhoneController:createDiaryUi()
 	topFold.Name = "TopFold"
 	topFold.Size = UDim2.new(1, -18, 0, 12)
 	topFold.Position = UDim2.fromOffset(9, 8)
-	topFold.BackgroundColor3 = Color3.fromRGB(231, 214, 188)
+	topFold.BackgroundColor3 = Theme.Colors.Paper
 	topFold.BackgroundTransparency = 0.32
 	topFold.BorderSizePixel = 0
 	topFold.ZIndex = 23
@@ -1069,9 +1067,9 @@ function PhoneController:createDiaryUi()
 	badge.Position = UDim2.fromOffset(16, 14)
 	badge.Size = UDim2.new(1, -32, 0, 16)
 	badge.BackgroundTransparency = 1
-	badge.Font = Enum.Font.GothamBold
+	badge.Font = Theme.Fonts.Display
 	badge.Text = ""
-	badge.TextColor3 = Color3.fromRGB(153, 107, 68)
+	badge.TextColor3 = Theme.Colors.Crimson
 	badge.TextSize = 9
 	badge.TextXAlignment = Enum.TextXAlignment.Left
 	badge.ZIndex = 24
@@ -1082,9 +1080,9 @@ function PhoneController:createDiaryUi()
 	title.Position = UDim2.fromOffset(16, 32)
 	title.Size = UDim2.new(1, -32, 0, 34)
 	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.GothamBold
+	title.Font = Theme.Fonts.Heading
 	title.Text = ""
-	title.TextColor3 = Color3.fromRGB(76, 52, 35)
+	title.TextColor3 = Theme.Colors.PaperInk
 	title.TextSize = 15
 	title.TextWrapped = true
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -1097,9 +1095,9 @@ function PhoneController:createDiaryUi()
 	meta.Position = UDim2.fromOffset(16, 68)
 	meta.Size = UDim2.new(1, -132, 0, 14)
 	meta.BackgroundTransparency = 1
-	meta.Font = Enum.Font.GothamMedium
+	meta.Font = Theme.Fonts.BodyStrong
 	meta.Text = ""
-	meta.TextColor3 = Color3.fromRGB(144, 111, 80)
+	meta.TextColor3 = Theme.Colors.BrassDark
 	meta.TextSize = 9
 	meta.TextXAlignment = Enum.TextXAlignment.Left
 	meta.ZIndex = 24
@@ -1110,12 +1108,12 @@ function PhoneController:createDiaryUi()
 	readFullButton.AnchorPoint = Vector2.new(1, 0)
 	readFullButton.Position = UDim2.new(1, -16, 0, 62)
 	readFullButton.Size = UDim2.fromOffset(98, 24)
-	readFullButton.BackgroundColor3 = Color3.fromRGB(154, 102, 59)
+	readFullButton.BackgroundColor3 = Theme.Colors.Crimson
 	readFullButton.BorderSizePixel = 0
 	readFullButton.AutoButtonColor = true
-	readFullButton.Font = Enum.Font.GothamBold
+	readFullButton.Font = Theme.Fonts.BodyStrong
 	readFullButton.Text = "Read Full"
-	readFullButton.TextColor3 = Color3.fromRGB(251, 241, 224)
+	readFullButton.TextColor3 = Theme.Colors.PaperLight
 	readFullButton.TextSize = 11
 	readFullButton.Visible = false
 	readFullButton.ZIndex = 24
@@ -1127,7 +1125,7 @@ function PhoneController:createDiaryUi()
 		line.Name = "RuleLine"
 		line.Size = UDim2.new(1, -28, 0, 1)
 		line.Position = UDim2.new(0, 14, 0, 108 + ((lineIndex - 1) * 18))
-		line.BackgroundColor3 = Color3.fromRGB(201, 189, 168)
+		line.BackgroundColor3 = Theme.Colors.PaperShadow
 		line.BackgroundTransparency = 0.35
 		line.BorderSizePixel = 0
 		line.ZIndex = 22
@@ -1143,7 +1141,7 @@ function PhoneController:createDiaryUi()
 	bodyScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	bodyScroll.CanvasSize = UDim2.new()
 	bodyScroll.ScrollBarThickness = 3
-	bodyScroll.ScrollBarImageColor3 = Color3.fromRGB(155, 124, 94)
+	bodyScroll.ScrollBarImageColor3 = Theme.Colors.BrassDark
 	bodyScroll.ZIndex = 24
 	bodyScroll.Parent = pageFrame
 
@@ -1156,9 +1154,9 @@ function PhoneController:createDiaryUi()
 	body.Size = UDim2.new(1, 0, 0, 0)
 	body.AutomaticSize = Enum.AutomaticSize.Y
 	body.BackgroundTransparency = 1
-	body.Font = Enum.Font.SourceSans
+	body.Font = Theme.Fonts.Document
 	body.Text = ""
-	body.TextColor3 = Color3.fromRGB(88, 67, 50)
+	body.TextColor3 = Theme.Colors.PaperInk
 	body.TextSize = 20
 	body.LineHeight = 1.16
 	body.TextWrapped = true
@@ -1173,9 +1171,9 @@ function PhoneController:createDiaryUi()
 	diaryEmptyState.Position = UDim2.fromScale(0.5, 0.54)
 	diaryEmptyState.Size = UDim2.new(1, -44, 0, 80)
 	diaryEmptyState.BackgroundTransparency = 1
-	diaryEmptyState.Font = Enum.Font.GothamMedium
+	diaryEmptyState.Font = Theme.Fonts.BodyStrong
 	diaryEmptyState.Text = t("phone.diary.empty_state")
-	diaryEmptyState.TextColor3 = Color3.fromRGB(218, 201, 182)
+	diaryEmptyState.TextColor3 = Theme.Colors.Paper
 	diaryEmptyState.TextSize = 13
 	diaryEmptyState.TextWrapped = true
 	diaryEmptyState.ZIndex = 24
@@ -1215,6 +1213,11 @@ function PhoneController:createDiaryUi()
 end
 
 function PhoneController:createHintUi(playerGui: PlayerGui)
+	local existingGui = playerGui:FindFirstChild("PhoneHintGui")
+	if existingGui then
+		existingGui:Destroy()
+	end
+
 	local hintGui = Instance.new("ScreenGui")
 	hintGui.Name = "PhoneHintGui"
 	hintGui.ResetOnSpawn = false
@@ -1227,15 +1230,15 @@ function PhoneController:createHintUi(playerGui: PlayerGui)
 	hintLabel.Name = "ShortcutHint"
 	hintLabel.AnchorPoint = Vector2.new(1, 1)
 	hintLabel.Position = UDim2.new(1, -22, 1, -28)
-	hintLabel.Size = UDim2.fromOffset(220, 48)
+	hintLabel.Size = UDim2.fromOffset(232, 38)
 	hintLabel.BackgroundTransparency = 1
-	hintLabel.Font = Enum.Font.GothamMedium
-	hintLabel.Text = "V to unlock mouse\nP to open phone"
-	hintLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	hintLabel.TextSize = 15
-	hintLabel.TextTransparency = 0.04
-	hintLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	hintLabel.TextStrokeTransparency = 0.45
+	hintLabel.BorderSizePixel = 0
+	hintLabel.Font = Theme.Fonts.BodyStrong
+	hintLabel.Text = "V   RELEASE CURSOR\nP   FIELD DEVICE"
+	hintLabel.TextColor3 = Theme.Colors.Text
+	hintLabel.TextSize = 11
+	hintLabel.TextStrokeColor3 = Theme.Colors.Ink
+	hintLabel.TextStrokeTransparency = 0.25
 	hintLabel.TextXAlignment = Enum.TextXAlignment.Right
 	hintLabel.TextYAlignment = Enum.TextYAlignment.Bottom
 	hintLabel.ZIndex = 10
@@ -1248,6 +1251,7 @@ function PhoneController:createHintUi(playerGui: PlayerGui)
 
 	ui.hintGui = hintGui
 	ui.hintScale = hintScale
+	ui.hintLabel = hintLabel
 end
 
 function PhoneController:createUi()
@@ -1269,13 +1273,14 @@ function PhoneController:createUi()
 	phone.AnchorPoint = Vector2.new(1, 1)
 	phone.Position = UDim2.new(1, -28, 1, 24)
 	phone.Size = UDim2.fromOffset(286, 504)
-	phone.BackgroundColor3 = Color3.fromRGB(9, 11, 15)
+	phone.BackgroundColor3 = Theme.Colors.Ink
 	phone.BorderSizePixel = 0
 	phone.GroupTransparency = 1
 	phone.ZIndex = 10
 	phone.Parent = screenGui
 	createCorner(phone, 34)
-	createStroke(phone, Color3.fromRGB(55, 61, 72), 0.05, 2)
+	createStroke(phone, Theme.Colors.Line, 0.08, 2)
+	Theme.addGradient(phone, Theme.Colors.SurfaceRaised, Theme.Colors.Ink)
 
 	local scale = Instance.new("UIScale")
 	scale.Name = "ResponsiveScale"
@@ -1286,7 +1291,7 @@ function PhoneController:createUi()
 	screen.Name = "Screen"
 	screen.Position = UDim2.fromOffset(13, 13)
 	screen.Size = UDim2.new(1, -26, 1, -26)
-	screen.BackgroundColor3 = Color3.fromRGB(15, 18, 24)
+	screen.BackgroundColor3 = Theme.Colors.Surface
 	screen.BorderSizePixel = 0
 	screen.ClipsDescendants = true
 	screen.ZIndex = 11
@@ -1305,24 +1310,35 @@ function PhoneController:createUi()
 	timeLabel.Position = UDim2.fromOffset(18, 8)
 	timeLabel.Size = UDim2.fromOffset(74, 20)
 	timeLabel.BackgroundTransparency = 1
-	timeLabel.Font = Enum.Font.GothamBold
-	timeLabel.Text = "PHONE"
-	timeLabel.TextColor3 = Color3.fromRGB(238, 242, 248)
-	timeLabel.TextSize = 12
+	timeLabel.Font = Theme.Fonts.Display
+	timeLabel.Text = "KARMA  //  SECURE"
+	timeLabel.TextColor3 = Theme.Colors.Ivory
+	timeLabel.TextSize = 9
 	timeLabel.TextXAlignment = Enum.TextXAlignment.Left
 	timeLabel.ZIndex = 15
 	timeLabel.Parent = statusBar
+
+	local statusLight = Instance.new("Frame")
+	statusLight.Name = "StatusLight"
+	statusLight.AnchorPoint = Vector2.new(1, 0.5)
+	statusLight.Position = UDim2.new(1, -51, 0.5, 0)
+	statusLight.Size = UDim2.fromOffset(5, 5)
+	statusLight.BackgroundColor3 = Theme.Colors.BrassBright
+	statusLight.BorderSizePixel = 0
+	statusLight.ZIndex = 15
+	statusLight.Parent = statusBar
+	createCorner(statusLight, 5)
 
 	local closeButton = Instance.new("TextButton")
 	closeButton.Name = "CloseButton"
 	closeButton.AnchorPoint = Vector2.new(1, 0)
 	closeButton.Position = UDim2.new(1, -14, 0, 8)
 	closeButton.Size = UDim2.fromOffset(28, 22)
-	closeButton.BackgroundColor3 = Color3.fromRGB(36, 42, 52)
+	closeButton.BackgroundColor3 = Theme.Colors.SurfaceHover
 	closeButton.AutoButtonColor = true
-	closeButton.Font = Enum.Font.GothamBold
+	closeButton.Font = Theme.Fonts.Display
 	closeButton.Text = "X"
-	closeButton.TextColor3 = Color3.fromRGB(232, 236, 243)
+	closeButton.TextColor3 = Theme.Colors.Text
 	closeButton.TextSize = 12
 	closeButton.ZIndex = 15
 	closeButton.Parent = statusBar
@@ -1339,15 +1355,42 @@ function PhoneController:createUi()
 	local wallpaper = Instance.new("Frame")
 	wallpaper.Name = "Wallpaper"
 	wallpaper.Size = UDim2.fromScale(1, 1)
-	wallpaper.BackgroundColor3 = Color3.fromRGB(24, 34, 45)
+	wallpaper.BackgroundColor3 = Theme.Colors.Backdrop
 	wallpaper.BorderSizePixel = 0
 	wallpaper.ZIndex = 12
 	wallpaper.Parent = homePage
+	Theme.addGradient(wallpaper, Color3.fromRGB(33, 31, 28), Theme.Colors.Ink, 125)
+
+	local homeEyebrow = Instance.new("TextLabel")
+	homeEyebrow.Name = "Eyebrow"
+	homeEyebrow.Position = UDim2.fromOffset(22, 20)
+	homeEyebrow.Size = UDim2.new(1, -44, 0, 14)
+	homeEyebrow.BackgroundTransparency = 1
+	homeEyebrow.Font = Theme.Fonts.Display
+	homeEyebrow.Text = "FIELD DEVICE  /  ARCHIVE ONLINE"
+	homeEyebrow.TextColor3 = Theme.Colors.Brass
+	homeEyebrow.TextSize = 8
+	homeEyebrow.TextXAlignment = Enum.TextXAlignment.Left
+	homeEyebrow.ZIndex = 16
+	homeEyebrow.Parent = homePage
+
+	local homeTitle = Instance.new("TextLabel")
+	homeTitle.Name = "Title"
+	homeTitle.Position = UDim2.fromOffset(22, 38)
+	homeTitle.Size = UDim2.new(1, -44, 0, 26)
+	homeTitle.BackgroundTransparency = 1
+	homeTitle.Font = Theme.Fonts.Heading
+	homeTitle.Text = "KARMA"
+	homeTitle.TextColor3 = Theme.Colors.Ivory
+	homeTitle.TextSize = 20
+	homeTitle.TextXAlignment = Enum.TextXAlignment.Left
+	homeTitle.ZIndex = 16
+	homeTitle.Parent = homePage
 
 	local appGrid = Instance.new("Frame")
 	appGrid.Name = "AppGrid"
-	appGrid.Position = UDim2.fromOffset(22, 32)
-	appGrid.Size = UDim2.new(1, -44, 1, -64)
+	appGrid.Position = UDim2.fromOffset(22, 88)
+	appGrid.Size = UDim2.new(1, -44, 1, -110)
 	appGrid.BackgroundTransparency = 1
 	appGrid.ZIndex = 16
 	appGrid.Parent = homePage
@@ -1362,7 +1405,7 @@ function PhoneController:createUi()
 	appPage.Name = "AppPage"
 	appPage.Position = UDim2.fromOffset(0, 36)
 	appPage.Size = UDim2.new(1, 0, 1, -78)
-	appPage.BackgroundColor3 = Color3.fromRGB(17, 21, 28)
+	appPage.BackgroundColor3 = Theme.Colors.Surface
 	appPage.BorderSizePixel = 0
 	appPage.Visible = false
 	appPage.ZIndex = 16
@@ -1373,9 +1416,9 @@ function PhoneController:createUi()
 	appTitle.Position = UDim2.fromOffset(18, 12)
 	appTitle.Size = UDim2.new(1, -36, 0, 24)
 	appTitle.BackgroundTransparency = 1
-	appTitle.Font = Enum.Font.GothamBold
+	appTitle.Font = Theme.Fonts.Heading
 	appTitle.Text = "Map"
-	appTitle.TextColor3 = Color3.fromRGB(239, 243, 249)
+	appTitle.TextColor3 = Theme.Colors.Ivory
 	appTitle.TextSize = 18
 	appTitle.TextXAlignment = Enum.TextXAlignment.Left
 	appTitle.ZIndex = 18
@@ -1386,7 +1429,7 @@ function PhoneController:createUi()
 	homeBar.AnchorPoint = Vector2.new(0.5, 1)
 	homeBar.Position = UDim2.new(0.5, 0, 1, -14)
 	homeBar.Size = UDim2.fromOffset(92, 6)
-	homeBar.BackgroundColor3 = Color3.fromRGB(221, 226, 235)
+	homeBar.BackgroundColor3 = Theme.Colors.Brass
 	homeBar.AutoButtonColor = false
 	homeBar.Text = ""
 	homeBar.ZIndex = 30
@@ -1435,7 +1478,15 @@ function PhoneController:updateScale()
 	ui.scale.Scale = math.clamp(math.min(maxWidthScale, maxHeightScale, 1), 0.72, 1)
 
 	if ui.hintScale then
-		ui.hintScale.Scale = math.clamp(math.min(viewport.X / 1280, viewport.Y / 720), 0.9, 1.3)
+		if viewport.X < 700 then
+			ui.hintScale.Scale = math.clamp(viewport.X / 520, 0.58, 0.78)
+			ui.hintLabel.AnchorPoint = Vector2.new(1, 0)
+			ui.hintLabel.Position = UDim2.new(1, -14, 0, 14)
+		else
+			ui.hintScale.Scale = math.clamp(math.min(viewport.X / 1280, viewport.Y / 720), 0.9, 1.3)
+			ui.hintLabel.AnchorPoint = Vector2.new(1, 1)
+			ui.hintLabel.Position = UDim2.new(1, -22, 1, -28)
+		end
 	end
 end
 

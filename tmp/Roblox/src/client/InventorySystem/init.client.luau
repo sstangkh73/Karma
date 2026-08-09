@@ -11,9 +11,17 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("InventorySystem", script) then
+	return
+end
+
 local InventoryShared = Shared:WaitForChild("InventoryShared")
 local Config = require(InventoryShared:WaitForChild("Config"))
 local GridUtils = require(InventoryShared:WaitForChild("GridUtils"))
+local Theme = require(Shared:WaitForChild("UITheme"))
 
 local InventoryClient = {
 	state = {
@@ -120,6 +128,14 @@ function InventoryClient:updateHudLayout()
 	local panelSpacing = Config.UI.PanelSpacing
 	local layoutMode = self:getLayoutMode()
 	self.state.layoutMode = layoutMode
+
+	local camera = workspace.CurrentCamera
+	if camera and self.ui.panelScale and self.ui.toolbarScale then
+		local viewport = camera.ViewportSize
+		local responsiveScale = math.clamp(math.min((viewport.X - 28) / 360, viewport.Y / 700), 0.72, 1)
+		self.ui.panelScale.Scale = responsiveScale
+		self.ui.toolbarScale.Scale = responsiveScale
+	end
 
 	if layoutMode == "Overlay" then
 		self.ui.toolbar.AnchorPoint = Vector2.new(1, 0)
@@ -296,17 +312,13 @@ function InventoryClient:getDragDataForItem(itemId: string, mousePosition: Vecto
 end
 
 function InventoryClient:createRoundedStroke(parent: Instance, color: Color3, transparency: number?)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = parent
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = color
-	stroke.Transparency = transparency or 0
-	stroke.Parent = parent
+	Theme.addCorner(parent, Theme.Radius.Medium)
+	Theme.addStroke(parent, color, transparency)
 end
 
 function InventoryClient:createUi()
+	local colors = Theme.Colors
+
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "InventoryGui"
 	screenGui.ResetOnSpawn = false
@@ -330,72 +342,94 @@ function InventoryClient:createUi()
 	toolbar.Active = true
 	toolbar.Parent = root
 
+	local toolbarScale = Instance.new("UIScale")
+	toolbarScale.Name = "ResponsiveScale"
+	toolbarScale.Parent = toolbar
+
 	local handSlotButton = Instance.new("TextButton")
 	handSlotButton.Name = "HandSlot"
 	handSlotButton.Size = UDim2.fromOffset(Config.UI.HandSlotSize, Config.UI.HandSlotSize)
 	handSlotButton.Position = UDim2.fromOffset(0, 0)
-	handSlotButton.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+	handSlotButton.BackgroundColor3 = colors.Surface
 	handSlotButton.AutoButtonColor = false
-	handSlotButton.Font = Enum.Font.GothamBold
-	handSlotButton.TextColor3 = Color3.fromRGB(245, 245, 245)
-	handSlotButton.TextSize = 13
+	handSlotButton.Font = Theme.Fonts.BodyStrong
+	handSlotButton.TextColor3 = colors.Ivory
+	handSlotButton.TextSize = 12
 	handSlotButton.TextWrapped = true
-	handSlotButton.Text = "HAND\nEmpty"
+	handSlotButton.Text = "01  /  HAND\nEMPTY"
 	handSlotButton.ZIndex = 20
 	handSlotButton.Parent = toolbar
-	self:createRoundedStroke(handSlotButton, Color3.fromRGB(88, 88, 96), 0.2)
+	self:createRoundedStroke(handSlotButton, colors.Line, 0.3)
 
 	local toggleButton = Instance.new("TextButton")
 	toggleButton.Name = "ToggleBag"
 	toggleButton.Size = UDim2.fromOffset(Config.UI.ToggleButtonWidth, Config.UI.ToolbarHeight)
 	toggleButton.Position = UDim2.fromOffset(Config.UI.HandSlotSize + Config.UI.ToolbarGap, 0)
-	toggleButton.BackgroundColor3 = Color3.fromRGB(31, 31, 36)
+	toggleButton.BackgroundColor3 = colors.Surface
 	toggleButton.AutoButtonColor = false
-	toggleButton.Font = Enum.Font.GothamBold
-	toggleButton.TextColor3 = Color3.fromRGB(245, 245, 245)
-	toggleButton.TextSize = 14
+	toggleButton.Font = Theme.Fonts.BodyStrong
+	toggleButton.TextColor3 = colors.Ivory
+	toggleButton.TextSize = 12
 	toggleButton.TextWrapped = true
-	toggleButton.Text = "BAG [I]\nOpen Inventory"
+	toggleButton.Text = "I  /  INVENTORY\nOPEN FIELD KIT"
 	toggleButton.ZIndex = 20
 	toggleButton.Parent = toolbar
-	self:createRoundedStroke(toggleButton, Color3.fromRGB(94, 94, 104), 0.18)
+	self:createRoundedStroke(toggleButton, colors.Brass, 0.38)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
 	panel.AnchorPoint = Vector2.new(0, 1)
 	panel.Position = UDim2.new(0.5, math.floor(self:getToolbarWidth() / 2) + Config.UI.PanelSpacing, 1, -Config.UI.BottomMargin)
 	panel.Size = UDim2.fromOffset(320, 180)
-	panel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-	panel.BackgroundTransparency = 0.08
+	panel.BackgroundColor3 = colors.Surface
+	panel.BackgroundTransparency = 0.06
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Active = true
 	panel.ZIndex = 10
 	panel.Parent = root
-	self:createRoundedStroke(panel, Color3.fromRGB(92, 92, 104), 0.16)
+	self:createRoundedStroke(panel, colors.Line, 0.28)
+	Theme.addGradient(panel, colors.SurfaceRaised, colors.Backdrop)
+
+	local panelScale = Instance.new("UIScale")
+	panelScale.Name = "ResponsiveScale"
+	panelScale.Parent = panel
+
+	local eyebrow = Instance.new("TextLabel")
+	eyebrow.Name = "Eyebrow"
+	eyebrow.Position = UDim2.fromOffset(Config.UI.PanelPadding, 12)
+	eyebrow.Size = UDim2.new(1, -(Config.UI.PanelPadding * 2), 0, 12)
+	eyebrow.BackgroundTransparency = 1
+	eyebrow.Font = Theme.Fonts.Display
+	eyebrow.Text = "FIELD INVENTORY  //  EVIDENCE KIT"
+	eyebrow.TextColor3 = colors.Brass
+	eyebrow.TextSize = 9
+	eyebrow.TextXAlignment = Enum.TextXAlignment.Left
+	eyebrow.ZIndex = 11
+	eyebrow.Parent = panel
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
-	title.Position = UDim2.fromOffset(Config.UI.PanelPadding, 12)
+	title.Position = UDim2.fromOffset(Config.UI.PanelPadding, 29)
 	title.Size = UDim2.new(1, -(Config.UI.PanelPadding * 2), 0, 24)
 	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.GothamBold
-	title.Text = "Inventory  [I]  [R] Rotate"
-	title.TextColor3 = Color3.fromRGB(245, 245, 245)
-	title.TextSize = 16
+	title.Font = Theme.Fonts.Heading
+	title.Text = "Recovered Items"
+	title.TextColor3 = colors.Ivory
+	title.TextSize = 17
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.ZIndex = 11
 	title.Parent = panel
 
 	local subtitle = Instance.new("TextLabel")
 	subtitle.Name = "Subtitle"
-	subtitle.Position = UDim2.fromOffset(Config.UI.PanelPadding, 38)
+	subtitle.Position = UDim2.fromOffset(Config.UI.PanelPadding, 53)
 	subtitle.Size = UDim2.new(1, -(Config.UI.PanelPadding * 2), 0, 30)
 	subtitle.BackgroundTransparency = 1
-	subtitle.Font = Enum.Font.Gotham
-	subtitle.Text = "Drag a Tool into HAND. To switch, store the current one in the bag first."
-	subtitle.TextColor3 = Color3.fromRGB(170, 170, 176)
-	subtitle.TextSize = 11
+	subtitle.Font = Theme.Fonts.Body
+	subtitle.Text = "DRAG TO REARRANGE   /   R ROTATE   /   1 EQUIP"
+	subtitle.TextColor3 = colors.Muted
+	subtitle.TextSize = 9
 	subtitle.TextWrapped = true
 	subtitle.TextXAlignment = Enum.TextXAlignment.Left
 	subtitle.ZIndex = 11
@@ -404,7 +438,7 @@ function InventoryClient:createUi()
 	local gridFrame = Instance.new("Frame")
 	gridFrame.Name = "Grid"
 	gridFrame.BackgroundTransparency = 1
-	gridFrame.Position = UDim2.fromOffset(Config.UI.PanelPadding, 74)
+	gridFrame.Position = UDim2.fromOffset(Config.UI.PanelPadding, 90)
 	gridFrame.Size = UDim2.fromOffset(0, 0)
 	gridFrame.Active = true
 	gridFrame.ZIndex = 11
@@ -412,12 +446,12 @@ function InventoryClient:createUi()
 
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "Status"
-	statusLabel.Position = UDim2.fromOffset(Config.UI.PanelPadding, 78)
+	statusLabel.Position = UDim2.fromOffset(Config.UI.PanelPadding, 92)
 	statusLabel.Size = UDim2.new(1, -(Config.UI.PanelPadding * 2), 0, 28)
 	statusLabel.BackgroundTransparency = 1
-	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.Text = "Connecting inventory..."
-	statusLabel.TextColor3 = Color3.fromRGB(170, 170, 176)
+	statusLabel.Font = Theme.Fonts.Body
+	statusLabel.Text = "Synchronizing field inventory..."
+	statusLabel.TextColor3 = colors.Muted
 	statusLabel.TextSize = 12
 	statusLabel.TextWrapped = true
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -434,21 +468,23 @@ function InventoryClient:createUi()
 
 	local placementFrame = Instance.new("Frame")
 	placementFrame.Name = "PlacementFrame"
-	placementFrame.BackgroundColor3 = Color3.fromRGB(76, 188, 120)
+	placementFrame.BackgroundColor3 = colors.Success
 	placementFrame.BackgroundTransparency = 0.35
 	placementFrame.BorderSizePixel = 0
 	placementFrame.Visible = false
 	placementFrame.ZIndex = 12
 	placementFrame.Parent = gridFrame
 
-	self:createRoundedStroke(placementFrame, Color3.fromRGB(255, 255, 255), 0.55)
+	self:createRoundedStroke(placementFrame, colors.Ivory, 0.62)
 
 	self.ui.screenGui = screenGui
 	self.ui.root = root
 	self.ui.toolbar = toolbar
+	self.ui.toolbarScale = toolbarScale
 	self.ui.handSlotButton = handSlotButton
 	self.ui.toggleButton = toggleButton
 	self.ui.panel = panel
+	self.ui.panelScale = panelScale
 	self.ui.title = title
 	self.ui.subtitle = subtitle
 	self.ui.gridFrame = gridFrame
@@ -495,7 +531,7 @@ function InventoryClient:updatePanelLayout()
 	local gridWidth = (columns * cellSize) + ((columns - 1) * padding)
 	local gridHeight = (rows * cellSize) + ((rows - 1) * padding)
 	local panelWidth = gridWidth + (panelPadding * 2)
-	local panelHeight = gridHeight + panelPadding + 70
+	local panelHeight = gridHeight + panelPadding + 92
 
 	self.ui.gridFrame.Position = UDim2.fromOffset(panelPadding, panelHeight - panelPadding - gridHeight)
 	self.ui.gridFrame.Size = UDim2.fromOffset(gridWidth, gridHeight)
@@ -532,15 +568,15 @@ function InventoryClient:createGrid()
 			cell.Name = string.format("Cell_%d_%d", column, row)
 			cell.Size = UDim2.fromOffset(Config.UI.CellSize, Config.UI.CellSize)
 			cell.Position = UDim2.fromOffset(self:getCellOffset(column), self:getCellOffset(row))
-			cell.BackgroundColor3 = Color3.fromRGB(34, 34, 39)
+			cell.BackgroundColor3 = Theme.Colors.SurfaceHover
+			cell.BackgroundTransparency = 0.34
 			cell.BorderSizePixel = 0
 			cell.Active = true
 			cell.ZIndex = 11
 			cell.Parent = self.ui.gridFrame
 
-			local cellCorner = Instance.new("UICorner")
-			cellCorner.CornerRadius = UDim.new(0, 8)
-			cellCorner.Parent = cell
+			Theme.addCorner(cell, Theme.Radius.Small)
+			Theme.addStroke(cell, Theme.Colors.LineSoft, 0.68)
 
 			self.ui.cellFrames[string.format("%d:%d", column, row)] = cell
 		end
@@ -552,8 +588,8 @@ function InventoryClient:resetPlacementPreview()
 
 	local handStroke = self.ui.handSlotButton:FindFirstChildOfClass("UIStroke")
 	if handStroke then
-		handStroke.Color = Color3.fromRGB(88, 88, 96)
-		handStroke.Transparency = 0.2
+		handStroke.Color = Theme.Colors.Line
+		handStroke.Transparency = 0.3
 		handStroke.Thickness = 1
 	end
 end
@@ -568,7 +604,7 @@ function InventoryClient:updatePlacementPreview(itemState, hover)
 	if hover.Target == "Hand" then
 		local handStroke = self.ui.handSlotButton:FindFirstChildOfClass("UIStroke")
 		if handStroke then
-			handStroke.Color = hover.CanPlace and Color3.fromRGB(76, 188, 120) or Color3.fromRGB(212, 79, 79)
+			handStroke.Color = hover.CanPlace and Theme.Colors.Success or Theme.Colors.Danger
 			handStroke.Transparency = 0
 			handStroke.Thickness = 2
 		end
@@ -594,7 +630,7 @@ function InventoryClient:updatePlacementPreview(itemState, hover)
 		self:getCellOffset(displayGridX),
 		self:getCellOffset(displayGridY)
 	)
-	self.ui.placementFrame.BackgroundColor3 = hover.CanPlace and Color3.fromRGB(76, 188, 120) or Color3.fromRGB(212, 79, 79)
+	self.ui.placementFrame.BackgroundColor3 = hover.CanPlace and Theme.Colors.Success or Theme.Colors.Danger
 	self.ui.placementFrame.Visible = true
 end
 
@@ -602,16 +638,16 @@ function InventoryClient:createInventoryItemFrame(itemId: string, itemState)
 	local button = Instance.new("TextButton")
 	button.Name = itemId
 	button.AutoButtonColor = false
-	button.Font = Enum.Font.GothamMedium
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.TextSize = 13
+	button.Font = Theme.Fonts.BodyStrong
+	button.TextColor3 = Theme.Colors.Ivory
+	button.TextSize = 12
 	button.TextWrapped = true
-	button.BackgroundColor3 = Color3.fromRGB(96, 122, 242)
+	button.BackgroundColor3 = Theme.Colors.BrassDark
 	button.BorderSizePixel = 0
 	button.ZIndex = 14
 	button.Parent = self.ui.gridFrame
 
-	self:createRoundedStroke(button, Color3.fromRGB(255, 255, 255), 0.45)
+	self:createRoundedStroke(button, Theme.Colors.Brass, 0.38)
 
 	button.InputBegan:Connect(function(input)
 		if not self.state.isOpen then
@@ -632,18 +668,18 @@ end
 function InventoryClient:createDragFrame(itemState)
 	local frame = Instance.new("TextLabel")
 	frame.Name = "DragPreview"
-	frame.BackgroundColor3 = Color3.fromRGB(76, 188, 120)
+	frame.BackgroundColor3 = Theme.Colors.Success
 	frame.BackgroundTransparency = 0.15
 	frame.BorderSizePixel = 0
 	frame.Text = itemState.Name
 	frame.TextWrapped = true
-	frame.Font = Enum.Font.GothamMedium
+	frame.Font = Theme.Fonts.BodyStrong
 	frame.TextSize = 13
-	frame.TextColor3 = Color3.fromRGB(255, 255, 255)
+	frame.TextColor3 = Theme.Colors.Ivory
 	frame.ZIndex = 35
 	frame.Parent = self.ui.dragLayer
 
-	self:createRoundedStroke(frame, Color3.fromRGB(255, 255, 255), 0.45)
+	self:createRoundedStroke(frame, Theme.Colors.Ivory, 0.48)
 
 	return frame
 end
@@ -667,11 +703,11 @@ function InventoryClient:refreshToolbar()
 	local handButton = self.ui.handSlotButton
 
 	if handItem and handItem.ItemId ~= self.state.draggingItemId then
-		handButton.Text = string.format("HAND\n%s", handItem.Name)
-		handButton.BackgroundColor3 = Color3.fromRGB(84, 120, 208)
+		handButton.Text = string.upper(handItem.Name)
+		handButton.BackgroundColor3 = Theme.Colors.BrassDark
 	else
-		handButton.Text = "HAND\nEmpty"
-		handButton.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+		handButton.Text = "01  /  HAND\nEMPTY"
+		handButton.BackgroundColor3 = Theme.Colors.Surface
 	end
 
 	local itemCount = 0
@@ -683,9 +719,9 @@ function InventoryClient:refreshToolbar()
 		end
 	end
 
-	self.ui.toggleButton.Text = string.format("BAG [I]\n%d item(s)", itemCount)
+	self.ui.toggleButton.Text = string.format("I  /  INVENTORY\n%02d RECOVERED", itemCount)
 	if not self:isReady() then
-		self.ui.toggleButton.Text = "BAG [I]\nConnecting..."
+		self.ui.toggleButton.Text = "I  /  INVENTORY\nSYNCHRONIZING"
 	end
 
 	self.ui.panel.Visible = self.state.isOpen
@@ -856,8 +892,8 @@ function InventoryClient:updateDragPreview()
 
 	dragFrame.Text = itemState.Name
 	dragFrame.BackgroundColor3 = (self.state.dragHover and self.state.dragHover.CanPlace)
-			and Color3.fromRGB(76, 188, 120)
-		or Color3.fromRGB(212, 79, 79)
+			and Theme.Colors.Success
+		or Theme.Colors.Danger
 end
 
 function InventoryClient:startDragging(itemId: string, mousePosition: Vector2?, source: string?)
@@ -935,11 +971,11 @@ function InventoryClient:pulseHandSlot()
 		return
 	end
 
-	stroke.Color = Color3.fromRGB(255, 230, 120)
+	stroke.Color = Theme.Colors.BrassBright
 	stroke.Thickness = 2
 	task.delay(0.18, function()
 		if stroke.Parent then
-			stroke.Color = Color3.fromRGB(88, 88, 96)
+			stroke.Color = Theme.Colors.Line
 			stroke.Thickness = 1
 		end
 	end)
@@ -965,7 +1001,6 @@ function InventoryClient:rotateDraggedItem()
 	local anchor = self:getDragAnchor()
 	local currentGrabOffset = self:getDragGrabOffset()
 	local currentPixelWidth = (currentWidth * Config.UI.CellSize) + ((currentWidth - 1) * Config.UI.CellPadding)
-	local currentPixelHeight = (currentHeight * Config.UI.CellSize) + ((currentHeight - 1) * Config.UI.CellPadding)
 	local nextPixelWidth = (nextWidth * Config.UI.CellSize) + ((nextWidth - 1) * Config.UI.CellPadding)
 	local nextPixelHeight = (nextHeight * Config.UI.CellSize) + ((nextHeight - 1) * Config.UI.CellPadding)
 
@@ -1206,3 +1241,4 @@ function InventoryClient:start()
 end
 
 InventoryClient:start()
+SystemHub.ready("InventorySystem", script)

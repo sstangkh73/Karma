@@ -1,14 +1,23 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("FlashlightSystem", script) then
+	return
+end
 
 local TOOL_NAME = "Flashlight"
 local RENDER_STEP_NAME = "FlashlightCameraAim"
 local AIM_ATTACHMENT_NAME = "FlashlightCameraAimAttachment"
 local PROXY_LIGHT_NAME = "FlashlightCameraAimLight"
 local REFRESH_INTERVAL = 0.1
+local FLASHLIGHT_RANGE = 55
 
 local state = {
 	activeTool = nil,
@@ -100,9 +109,12 @@ local function createTarget(sourceLight: SpotLight?, origin: Instance, parentPar
 		proxyLight.Angle = 55
 		proxyLight.Brightness = 3
 		proxyLight.Color = Color3.fromRGB(255, 244, 214)
-		proxyLight.Range = 40
 		proxyLight.Shadows = true
 	end
+
+	-- Black distance fog starts at 50, masking the final five studs before the
+	-- engine reaches this hard light-range boundary.
+	proxyLight.Range = FLASHLIGHT_RANGE
 
 	proxyLight.Name = PROXY_LIGHT_NAME
 	proxyLight.Face = Enum.NormalId.Front
@@ -279,7 +291,11 @@ local function updateAim()
 
 			if not state.hasLoggedAim then
 				local aimDot = attachment.WorldCFrame.LookVector:Dot(cameraCFrame.LookVector)
-				print(("[FlashlightSystem] Camera aim active targets=%d dot=%.4f"):format(#state.targets, aimDot))
+				print(("[FlashlightSystem] Camera aim active targets=%d dot=%.4f range=%.1f"):format(
+					#state.targets,
+					aimDot,
+					proxyLight.Range
+				))
 				state.hasLoggedAim = true
 			end
 		end
@@ -298,4 +314,5 @@ script.Destroying:Connect(function()
 	clearActiveTool()
 end)
 
-print("[FlashlightSystem] Boot v2")
+SystemHub.ready("FlashlightSystem", script)
+print(("[FlashlightSystem] Boot v5 fog-blended range=%.1f"):format(FLASHLIGHT_RANGE))

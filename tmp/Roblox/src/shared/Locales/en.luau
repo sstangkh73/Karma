@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "Secret Record",
-	["notes.note_1.body"] = [[Hello to whoever finds this letter.
+	["notes.note_0.title"] = "System Test Note",
+	["notes.note_0.body"] = [[Hello to whoever finds this letter.
 
 I am writing this message to tell you what happened
 on the day everything changed...
@@ -10,6 +10,19 @@ If you are reading this, then you have already found the paper.
 Please remember that not everything is as it seems.
 
 - The Writer]],
+	["notes.note_1.title"] = "Letter on the Chain",
+	["notes.note_1.body"] = [[Win,
+
+If you are at the school gate, do not go into the buildings yet.
+Go to the grandparents' shrine behind the cafeteria first.
+
+I buried the phone in the soil that looks cleaner than everything around it.
+Dig it up, open the latest message, and follow it.
+
+Before this school is torn down, everything has to be read.
+Especially the parts we kept telling ourselves had nothing to do with us.
+
+- The one who used to run the school broadcast]],
 
 	["note.ui.read_text"] = "Read Text",
 	["note.ui.view_handwriting"] = "View Handwriting",
@@ -34,6 +47,11 @@ Please remember that not everything is as it seems.
 	["spawn.warning.headphones"] = "Headphones are recommended for the full experience.",
 	["spawn.warning.effects"] = "This game contains flashing lights, sudden loud sounds, and a tense atmosphere.",
 	["spawn.warning.discretion"] = "Player discretion is advised.",
+	["spawn.loading.title"] = "LOADING",
+	["spawn.loading.preparing"] = "Preparing the world...",
+	["spawn.loading.radius"] = "Loading the first {radius} studs around you (attempt {attempt})...",
+	["spawn.loading.waiting"] = "WAITING FOR PLAYERS",
+	["spawn.loading.status"] = "{ready}/{total} PLAYERS READY",
 
 	["interaction.prompt.use"] = "Use",
 	["interaction.prompt.pick_up"] = "Pick up",

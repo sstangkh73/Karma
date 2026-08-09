@@ -3,10 +3,19 @@
 -- regenerate stamina when stopping, and hide the bar when full.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("SprintSystem", script) then
+	return
+end
 
 local SprintSystem = {}
 SprintSystem.RENDER_STEP_NAME = "SprintSystemCameraEffects"
@@ -31,7 +40,7 @@ SprintSystem.CONFIG = {
 	SPRINT_FOV_BOOST = 5,
 	FOV_TWEEN_TIME = 0.18,
 	CAMERA_SHAKE = {
-		LOW_STAMINA_START_RATIO = 0.25,
+		LOW_STAMINA_START_RATIO = 0.5,
 		MAX_PITCH_DEGREES = 0.18,
 		MAX_ROLL_DEGREES = 0.3,
 		PITCH_FREQUENCY = 18,
@@ -485,7 +494,7 @@ function SprintSystem:bind()
 		self:update(dt)
 	end)
 
-	RunService:UnbindToRenderStep(self.RENDER_STEP_NAME)
+	RunService:UnbindFromRenderStep(self.RENDER_STEP_NAME)
 	RunService:BindToRenderStep(self.RENDER_STEP_NAME, Enum.RenderPriority.Camera.Value + 1, function(dt)
 		self:updateCameraEffects(dt)
 	end)
@@ -504,3 +513,4 @@ function SprintSystem:start()
 end
 
 SprintSystem:start()
+SystemHub.ready("SprintSystem", script)

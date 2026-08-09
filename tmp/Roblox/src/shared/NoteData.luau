@@ -1,30 +1,46 @@
 local Localization = require(script.Parent:WaitForChild("Localization"))
+local NoteContent = require(script.Parent:WaitForChild("NoteContent"))
 
 local NoteData = {}
 
-local notes = {
-	{
-		id = "note_1",
-		titleKey = "notes.note_1.title",
-		typedTextKey = "notes.note_1.body",
-		handwritingImage = "rbxassetid://0",
-	},
+local notes = NoteContent
 
-	-- Add more notes here:
-	-- {
-	-- 	id = "note_2",
-	-- 	titleKey = "notes.note_2.title",
-	-- 	typedTextKey = "notes.note_2.body",
-	-- 	handwritingImage = "rbxassetid://XXXXX",
-	-- },
-}
+local function resolveLocalizedText(note, fieldName: string, keyFieldName: string, languageCode: string?): string
+	local localized = note[fieldName]
+	if typeof(localized) == "table" then
+		local resolvedLanguageCode = languageCode or Localization.getCurrentLanguageCode()
+		local value = localized[resolvedLanguageCode]
+		if typeof(value) == "string" then
+			return value
+		end
+	elseif typeof(localized) == "string" then
+		return localized
+	end
+
+	local key = note[keyFieldName]
+	if typeof(key) == "string" and key ~= "" then
+		return Localization.translate(key, nil, languageCode)
+	end
+
+	if typeof(localized) == "table" then
+		local fallback = localized.en or localized.th
+		if typeof(fallback) == "string" then
+			return fallback
+		end
+	end
+
+	return ""
+end
 
 local function createResolvedNote(note, languageCode: string?)
 	return {
 		id = note.id,
-		title = note.titleKey and Localization.translate(note.titleKey, nil, languageCode) or "",
-		typedText = note.typedTextKey and Localization.translate(note.typedTextKey, nil, languageCode) or "",
+		title = resolveLocalizedText(note, "title", "titleKey", languageCode),
+		typedText = resolveLocalizedText(note, "body", "typedTextKey", languageCode),
 		handwritingImage = note.handwritingImage or "",
+		viewType = note.viewType or "text",
+		image = note.image or "",
+		imageAspectRatio = note.imageAspectRatio or (2 / 3),
 	}
 end
 

@@ -1,7 +1,7 @@
 -- Derived locale. Keep keys identical to the source locale file.
 return {
-	["notes.note_1.title"] = "비밀 기록",
-	["notes.note_1.body"] = [[이 편지를 발견한 사람에게.
+	["notes.note_0.title"] = "시스템 테스트 쪽지",
+	["notes.note_0.body"] = [[이 편지를 발견한 사람에게.
 
 모든 것이 바뀌던 날에 무슨 일이 있었는지
 당신에게 전하기 위해 이 글을 남깁니다...
@@ -10,6 +10,19 @@ return {
 보이는 것이 전부는 아니라는 사실을 꼭 기억해 주세요.
 
 - 작성자]],
+	["notes.note_1.title"] = "쇠사슬에 끼워진 편지",
+	["notes.note_1.body"] = [[윈,
+
+학교 정문에 도착했다면 아직 건물 안으로 들어가지 마세요.
+먼저 급식실 뒤쪽의 조부모님 사당으로 가세요.
+
+주변보다 깨끗해 보이는 흙 속에 휴대폰을 묻어 두었습니다.
+파낸 뒤 가장 최근 메시지를 열고 그대로 따르세요.
+
+이 학교가 철거되기 전에 모든 것을 읽어야 합니다.
+특히 우리가 우리와 상관없다고 말해 온 것들을요.
+
+- 예전에 학교 방송을 맡았던 사람]],
 
 	["note.ui.read_text"] = "본문 읽기",
 	["note.ui.view_handwriting"] = "손글씨 보기",

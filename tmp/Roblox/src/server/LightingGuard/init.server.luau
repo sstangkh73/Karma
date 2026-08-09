@@ -3,6 +3,15 @@
 -- Place this Script in ServerScriptService when syncing with Rojo.
 
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("LightingGuard", script) then
+	return
+end
 
 local CONFIG = {
 	DEBUG = true,
@@ -18,19 +27,16 @@ local CONFIG = {
 	ENVIRONMENT_DIFFUSE_SCALE = 0.55,
 	ENVIRONMENT_SPECULAR_SCALE = 0.35,
 
-	FOG_START = 120,
-	FOG_END = 520,
-	FOG_COLOR = Color3.fromRGB(82, 94, 122),
+	-- Keep the flashlight's 55-stud reach clear, then progressively hide the
+	-- distance in black. Roblox blends FogColor from FogStart to FogEnd.
+	FOG_START = 50,
+	FOG_END = 120,
+	FOG_COLOR = Color3.fromRGB(0, 0, 0),
 
 	COLOR_TINT = Color3.fromRGB(195, 210, 255),
 	COLOR_BRIGHTNESS = 0.08,
 	COLOR_CONTRAST = 0.18,
 	COLOR_SATURATION = -0.1,
-
-	ATMOSPHERE_DENSITY = 0.18,
-	ATMOSPHERE_OFFSET = 0.12,
-	ATMOSPHERE_COLOR = Color3.fromRGB(135, 150, 190),
-	ATMOSPHERE_DECAY = Color3.fromRGB(45, 48, 70),
 
 	BLOOM_INTENSITY = 0.12,
 	BLOOM_SIZE = 18,
@@ -40,6 +46,14 @@ local CONFIG = {
 }
 
 local applying = false
+
+local function removeAtmospheres()
+	for _, child in ipairs(Lighting:GetChildren()) do
+		if child:IsA("Atmosphere") then
+			child:Destroy()
+		end
+	end
+end
 
 local function getOrCreate(className: string): Instance
 	local existing = Lighting:FindFirstChildOfClass(className)
@@ -58,6 +72,7 @@ local function applyPreset(reason: string)
 	end
 
 	applying = true
+	removeAtmospheres()
 
 	Lighting.ClockTime = CONFIG.CLOCK_TIME
 	Lighting.Brightness = CONFIG.BRIGHTNESS
@@ -77,12 +92,6 @@ local function applyPreset(reason: string)
 	color.Contrast = CONFIG.COLOR_CONTRAST
 	color.Saturation = CONFIG.COLOR_SATURATION
 
-	local atmosphere = getOrCreate("Atmosphere") :: Atmosphere
-	atmosphere.Density = CONFIG.ATMOSPHERE_DENSITY
-	atmosphere.Offset = CONFIG.ATMOSPHERE_OFFSET
-	atmosphere.Color = CONFIG.ATMOSPHERE_COLOR
-	atmosphere.Decay = CONFIG.ATMOSPHERE_DECAY
-
 	local bloom = getOrCreate("BloomEffect") :: BloomEffect
 	bloom.Intensity = CONFIG.BLOOM_INTENSITY
 	bloom.Size = CONFIG.BLOOM_SIZE
@@ -97,7 +106,11 @@ local function applyPreset(reason: string)
 	sky.SkyboxUp = CONFIG.SKYBOX_ID
 
 	if CONFIG.DEBUG then
-		print(("[LightingGuard] Applied Realistic night preset: %s"):format(reason))
+		print(("[LightingGuard] Applied black distance fog start=%.1f end=%.1f atmosphere=off: %s"):format(
+			CONFIG.FOG_START,
+			CONFIG.FOG_END,
+			reason
+		))
 	end
 
 	applying = false
@@ -132,11 +145,15 @@ for _, propertyName in ipairs(watchedProperties) do
 end
 
 Lighting.ChildAdded:Connect(function(child)
-	if child:IsA("ColorCorrectionEffect")
-		or child:IsA("Atmosphere")
+	if child:IsA("Atmosphere") then
+		child:Destroy()
+		applyPreset("Atmosphere removed")
+	elseif child:IsA("ColorCorrectionEffect")
 		or child:IsA("BloomEffect")
 		or child:IsA("Sky")
 	then
 		applyPreset(("%s added"):format(child.ClassName))
 	end
 end)
+
+SystemHub.ready("LightingGuard", script)

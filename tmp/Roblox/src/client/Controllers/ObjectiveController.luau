@@ -1,11 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Core = Shared:WaitForChild("Core")
 local Localization = require(Shared:WaitForChild("Localization"))
 local ObjectiveShared = require(Shared:WaitForChild("ObjectiveShared"))
 local RemoteGateway = require(Core:WaitForChild("RemoteGateway"))
+local Theme = require(Shared:WaitForChild("UITheme"))
 
 local ObjectiveController = {
 	Name = "ObjectiveController",
@@ -18,10 +20,11 @@ local ObjectiveController = {
 }
 
 local UI = {
-	MaxWidth = 360,
-	TopPadding = 24,
-	RightPadding = 24,
-	CardSpacing = 10,
+	MinWidth = 270,
+	MaxWidth = 350,
+	TopPadding = 28,
+	RightPadding = 26,
+	CardSpacing = 9,
 }
 
 local function resolveText(text: string, key: string?, params)
@@ -45,15 +48,21 @@ function ObjectiveController:createGui()
 	screenGui.IgnoreGuiInset = true
 	screenGui.DisplayOrder = 35
 	screenGui.Enabled = false
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	screenGui.Parent = playerGui
 
 	local root = Instance.new("Frame")
 	root.Name = "Root"
 	root.AnchorPoint = Vector2.new(1, 0)
 	root.Position = UDim2.new(1, -UI.RightPadding, 0, UI.TopPadding)
-	root.Size = UDim2.new(0, UI.MaxWidth, 1, -UI.TopPadding * 2)
+	root.Size = UDim2.new(0.28, 0, 1, -UI.TopPadding * 2)
 	root.BackgroundTransparency = 1
 	root.Parent = screenGui
+
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MinSize = Vector2.new(UI.MinWidth, 0)
+	sizeConstraint.MaxSize = Vector2.new(UI.MaxWidth, 10000)
+	sizeConstraint.Parent = root
 
 	local list = Instance.new("Frame")
 	list.Name = "CardList"
@@ -75,34 +84,32 @@ function ObjectiveController:createGui()
 end
 
 function ObjectiveController:createCard(objective)
-	local card = Instance.new("Frame")
+	local colors = Theme.Colors
+
+	local card = Instance.new("CanvasGroup")
 	card.Name = objective.Id
 	card.AutomaticSize = Enum.AutomaticSize.Y
 	card.Size = UDim2.new(1, 0, 0, 0)
 	card.BackgroundTransparency = 1
 	card.BorderSizePixel = 0
+	card.GroupTransparency = 1
+	card.Parent = self.cardList
 
 	local accent = Instance.new("Frame")
 	accent.Name = "Accent"
-	accent.AnchorPoint = Vector2.new(1, 0)
-	accent.Position = UDim2.new(1, 0, 0, 0)
-	accent.Size = UDim2.new(0, 3, 1, 0)
+	accent.Position = UDim2.new(0, 0, 0, 12)
+	accent.Size = UDim2.new(0, 3, 1, -24)
 	accent.BackgroundColor3 = objective.AccentColor
 	accent.BorderSizePixel = 0
+	accent.ZIndex = 3
 	accent.Parent = card
-
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 8)
-	padding.PaddingBottom = UDim.new(0, 8)
-	padding.PaddingLeft = UDim.new(0, 8)
-	padding.PaddingRight = UDim.new(0, 16)
-	padding.Parent = card
+	Theme.addCorner(accent, 3)
 
 	local body = Instance.new("Frame")
 	body.Name = "Body"
 	body.AutomaticSize = Enum.AutomaticSize.Y
-	body.Size = UDim2.new(1, -10, 0, 0)
-	body.Position = UDim2.new(0, 0, 0, 0)
+	body.Position = UDim2.fromOffset(18, 12)
+	body.Size = UDim2.new(1, -34, 0, 0)
 	body.BackgroundTransparency = 1
 	body.Parent = card
 
@@ -111,33 +118,55 @@ function ObjectiveController:createCard(objective)
 	bodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	bodyLayout.Parent = body
 
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.Name = "Status"
+	statusLabel.LayoutOrder = 1
+	statusLabel.AutomaticSize = Enum.AutomaticSize.Y
+	statusLabel.Size = UDim2.new(1, 0, 0, 0)
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.Font = Theme.Fonts.Display
+	statusLabel.Text = "ACTIVE OBJECTIVE"
+	statusLabel.TextColor3 = colors.Brass
+	statusLabel.TextSize = 9
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+	statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+	statusLabel.Parent = body
+
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "Title"
+	titleLabel.LayoutOrder = 2
 	titleLabel.AutomaticSize = Enum.AutomaticSize.Y
 	titleLabel.Size = UDim2.new(1, 0, 0, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Font = Enum.Font.GothamBold
-	titleLabel.TextSize = 21
-	titleLabel.TextColor3 = Color3.fromRGB(248, 248, 248)
+	titleLabel.Font = Theme.Fonts.Heading
+	titleLabel.TextSize = 17
+	titleLabel.TextColor3 = colors.Ivory
 	titleLabel.TextWrapped = true
-	titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	titleLabel.TextYAlignment = Enum.TextYAlignment.Top
 	titleLabel.Parent = body
 
 	local descriptionLabel = Instance.new("TextLabel")
 	descriptionLabel.Name = "Description"
+	descriptionLabel.LayoutOrder = 3
 	descriptionLabel.AutomaticSize = Enum.AutomaticSize.Y
 	descriptionLabel.Size = UDim2.new(1, 0, 0, 0)
 	descriptionLabel.BackgroundTransparency = 1
-	descriptionLabel.Font = Enum.Font.Gotham
-	descriptionLabel.TextSize = 16
-	descriptionLabel.TextColor3 = Color3.fromRGB(232, 232, 232)
+	descriptionLabel.Font = Theme.Fonts.Body
+	descriptionLabel.TextSize = 12
+	descriptionLabel.LineHeight = 1.12
+	descriptionLabel.TextColor3 = colors.Muted
 	descriptionLabel.TextWrapped = true
-	descriptionLabel.TextXAlignment = Enum.TextXAlignment.Center
+	descriptionLabel.TextXAlignment = Enum.TextXAlignment.Left
 	descriptionLabel.TextYAlignment = Enum.TextYAlignment.Top
 	descriptionLabel.Parent = body
 
-	card.Parent = self.cardList
+	local bottomSpacer = Instance.new("Frame")
+	bottomSpacer.Name = "BottomSpacer"
+	bottomSpacer.LayoutOrder = 4
+	bottomSpacer.Size = UDim2.new(1, 0, 0, 8)
+	bottomSpacer.BackgroundTransparency = 1
+	bottomSpacer.Parent = body
 
 	self.cardsById[objective.Id] = {
 		Card = card,
@@ -146,6 +175,7 @@ function ObjectiveController:createCard(objective)
 		Description = descriptionLabel,
 	}
 
+	TweenService:Create(card, Theme.Motion.Standard, { GroupTransparency = 0 }):Play()
 	return self.cardsById[objective.Id]
 end
 

@@ -11,6 +11,27 @@ return {
 		-- OnCompletedCallback = "EnterMansionCompleted",
 	},
 	{
+		Id = "go_to_cafeteria_shrine",
+		Channel = "Quest",
+		Title = "ไปที่ศาลหลังโรงอาหาร",
+		Description = "",
+		Order = 2,
+	},
+	{
+		Id = "go_to_new_building",
+		Channel = "Quest",
+		Title = "ไปที่ตึกใหม่",
+		Description = "",
+		Order = 3,
+	},
+	{
+		Id = "dig_karma",
+		Channel = "Quest",
+		Title = "ขุดบาป",
+		Description = "",
+		Order = 4,
+	},
+	{
 		Id = "find_jada",
 		Channel = "Quest",
 		Title = "Found Jada",

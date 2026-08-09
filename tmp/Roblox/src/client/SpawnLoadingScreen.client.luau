@@ -2,12 +2,23 @@ local ContentProvider = game:GetService("ContentProvider")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local Localization = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Localization"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Core = Shared:WaitForChild("Core")
+local SystemHub = require(Core:WaitForChild("SystemHub"))
+
+if not SystemHub.begin("SpawnLoadingScreen", script) then
+	return
+end
+
+local Localization = require(Shared:WaitForChild("Localization"))
+local RemoteGateway = require(Core:WaitForChild("RemoteGateway"))
+local Theme = require(Shared:WaitForChild("UITheme"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -15,6 +26,10 @@ local playerGui = player:WaitForChild("PlayerGui")
 local INTRO_DELAY = 0.2
 local INTER_MESSAGE_GAP = 0.2
 local MESSAGE_HOLD_TIME = 1.6
+local MIN_GATE_DISPLAY_TIME = 0.6
+
+local LOADING_REMOTE_FOLDER = "GameRemotes"
+local LOADING_REMOTE_NAME = "LoadingGateEvent"
 
 local MESSAGE_FADE_IN_INFO = TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local MESSAGE_FADE_OUT_INFO = TweenInfo.new(0.725, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -33,10 +48,23 @@ local DEFAULT_SECONDARY_MAX_SIZE = 22
 
 local PRELOAD_BATCH_SIZE = 24
 local PRELOAD_BATCH_DELAY = 0.03
-local PRELOAD_STREAM_DISTANCES = {0, 36, 72}
-local PRELOAD_NEAR_RADIUS = 70
-local PRELOAD_VIEW_RADIUS = 100
 local PRELOAD_GUI_SCAN_TIMEOUT = 1
+
+local CRITICAL_LOAD_RADIUS = 128
+local CRITICAL_STREAM_OFFSET = 72
+local NEARBY_LOAD_RADIUS = 384
+local NEARBY_STREAM_OFFSET = 240
+local STREAM_REQUEST_TIMEOUT = 24
+local AREA_STABILITY_TIMEOUT = 8
+local AREA_STABILITY_INTERVAL = 0.25
+local AREA_STABILITY_REQUIRED_SAMPLES = 4
+local AREA_STABILITY_MIN_PARTS = 24
+local AREA_STABILITY_MIN_COVERAGE = 0.55
+local LOAD_RETRY_DELAY = 1.5
+local RENDER_WARMUP_VIEWS = 4
+local RENDER_WARMUP_FRAMES_PER_VIEW = 10
+local RENDER_WARMUP_FINAL_FRAMES = 6
+local RENDER_WARMUP_FIELD_OF_VIEW = 90
 
 local GUI_NAME_PATTERNS = {
 	"crosshair",
@@ -87,6 +115,40 @@ local messageSequence = {
 }
 
 local activeSequenceId = 0
+local loadingGateRemote = RemoteGateway.waitForRemote(LOADING_REMOTE_FOLDER, LOADING_REMOTE_NAME, "RemoteEvent", 15)
+local latestGateStatus = {
+	Ready = 0,
+	Total = math.max(#Players:GetPlayers(), 1),
+}
+local releasedSequences = {}
+local streamResults = {}
+local streamRequestId = 0
+
+local function getStreamResultKey(sequenceId: number, requestId: number)
+	return ("%d:%d"):format(sequenceId, requestId)
+end
+
+if loadingGateRemote then
+	loadingGateRemote.OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+
+		if payload.Type == "Status" then
+			latestGateStatus.Ready = if typeof(payload.Ready) == "number" then payload.Ready else latestGateStatus.Ready
+			latestGateStatus.Total = if typeof(payload.Total) == "number" then payload.Total else latestGateStatus.Total
+		elseif payload.Type == "Release" and typeof(payload.SequenceId) == "number" then
+			releasedSequences[payload.SequenceId] = true
+		elseif payload.Type == "StreamResult"
+			and typeof(payload.SequenceId) == "number"
+			and typeof(payload.RequestId) == "number"
+		then
+			streamResults[getStreamResultKey(payload.SequenceId, payload.RequestId)] = payload
+		end
+	end)
+else
+	warn("[SpawnLoadingScreen] LoadingGateEvent was not available; using local-load fallback")
+end
 
 local function getSecondaryLanguageCode(): string
 	local currentLanguageCode = Localization.getCurrentLanguageCode()
@@ -160,6 +222,7 @@ local function createLabel(
 	label.TextTransparency = 1
 	label.TextWrapped = true
 	label.TextXAlignment = Enum.TextXAlignment.Center
+	label.ZIndex = 3
 	label.Parent = parent
 
 	local constraint = Instance.new("UITextSizeConstraint")
@@ -184,19 +247,23 @@ local function buildWarningGui()
 	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	screenGui.Parent = playerGui
 
+	local colors = Theme.Colors
+
 	local background = Instance.new("Frame")
 	background.Name = "Background"
 	background.Size = UDim2.fromScale(1, 1)
-	background.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
+	background.BackgroundColor3 = colors.Ink
 	background.BorderSizePixel = 0
+	background.ZIndex = 1
 	background.Parent = screenGui
 
 	local backgroundGradient = Instance.new("UIGradient")
 	backgroundGradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 12, 18)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 3, 5)),
+		ColorSequenceKeypoint.new(0, colors.Surface),
+		ColorSequenceKeypoint.new(0.52, colors.Ink),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(2, 3, 4)),
 	})
-	backgroundGradient.Rotation = 90
+	backgroundGradient.Rotation = 112
 	backgroundGradient.Parent = background
 
 	local vignette = Instance.new("Frame")
@@ -204,14 +271,67 @@ local function buildWarningGui()
 	vignette.AnchorPoint = Vector2.new(0.5, 0.5)
 	vignette.Position = UDim2.fromScale(0.5, 0.5)
 	vignette.Size = UDim2.fromScale(1.15, 1.15)
-	vignette.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	vignette.BackgroundTransparency = 0.5
+	vignette.BackgroundColor3 = colors.Ink
+	vignette.BackgroundTransparency = 0.72
 	vignette.BorderSizePixel = 0
+	vignette.ZIndex = 1
 	vignette.Parent = background
 
 	local vignetteCorner = Instance.new("UICorner")
 	vignetteCorner.CornerRadius = UDim.new(1, 0)
 	vignetteCorner.Parent = vignette
+
+	local brand = Instance.new("TextLabel")
+	brand.Name = "Brand"
+	brand.Position = UDim2.fromOffset(44, 34)
+	brand.Size = UDim2.fromOffset(240, 24)
+	brand.BackgroundTransparency = 1
+	brand.Font = Theme.Fonts.Display
+	brand.Text = "K A R M A"
+	brand.TextColor3 = colors.Ivory
+	brand.TextSize = 15
+	brand.TextTransparency = 0.08
+	brand.TextXAlignment = Enum.TextXAlignment.Left
+	brand.ZIndex = 3
+	brand.Parent = background
+
+	local brandMeta = Instance.new("TextLabel")
+	brandMeta.Name = "BrandMeta"
+	brandMeta.Position = UDim2.fromOffset(44, 58)
+	brandMeta.Size = UDim2.fromOffset(280, 18)
+	brandMeta.BackgroundTransparency = 1
+	brandMeta.Font = Theme.Fonts.BodyStrong
+	brandMeta.Text = "PSYCHOLOGICAL HORROR EXPERIENCE"
+	brandMeta.TextColor3 = colors.Brass
+	brandMeta.TextSize = 9
+	brandMeta.TextTransparency = 0.2
+	brandMeta.TextXAlignment = Enum.TextXAlignment.Left
+	brandMeta.ZIndex = 3
+	brandMeta.Parent = background
+
+	local brandLine = Instance.new("Frame")
+	brandLine.Name = "BrandLine"
+	brandLine.Position = UDim2.fromOffset(44, 82)
+	brandLine.Size = UDim2.fromOffset(72, 1)
+	brandLine.BackgroundColor3 = colors.Brass
+	brandLine.BackgroundTransparency = 0.25
+	brandLine.BorderSizePixel = 0
+	brandLine.ZIndex = 3
+	brandLine.Parent = background
+
+	local sequenceMeta = Instance.new("TextLabel")
+	sequenceMeta.Name = "SequenceMeta"
+	sequenceMeta.AnchorPoint = Vector2.new(1, 1)
+	sequenceMeta.Position = UDim2.new(1, -44, 1, -34)
+	sequenceMeta.Size = UDim2.fromOffset(260, 18)
+	sequenceMeta.BackgroundTransparency = 1
+	sequenceMeta.Font = Theme.Fonts.BodyStrong
+	sequenceMeta.Text = "INITIALIZING  //  PLEASE WAIT"
+	sequenceMeta.TextColor3 = colors.Faint
+	sequenceMeta.TextSize = 9
+	sequenceMeta.TextXAlignment = Enum.TextXAlignment.Right
+	sequenceMeta.ZIndex = 3
+	sequenceMeta.Parent = background
 
 	local container = Instance.new("Frame")
 	container.Name = "Container"
@@ -219,13 +339,14 @@ local function buildWarningGui()
 	container.Position = UDim2.fromScale(0.5, 0.5)
 	container.Size = UDim2.new(0.84, 0, 0, 210)
 	container.BackgroundTransparency = 1
+	container.ZIndex = 2
 	container.Parent = background
 
 	local primaryLabel, primaryConstraint = createLabel(
 		container,
 		"Primary",
-		Enum.Font.GothamMedium,
-		Color3.fromRGB(245, 245, 247),
+		Theme.Fonts.Heading,
+		Color3.fromRGB(248, 244, 234),
 		UDim2.new(1, 0, 0, 82),
 		PRIMARY_START_POSITION,
 		16,
@@ -236,8 +357,8 @@ local function buildWarningGui()
 	local secondaryLabel, secondaryConstraint = createLabel(
 		container,
 		"Secondary",
-		Enum.Font.Gotham,
-		Color3.fromRGB(168, 168, 176),
+		Theme.Fonts.Body,
+		Color3.fromRGB(188, 186, 180),
 		UDim2.new(1, 0, 0, 48),
 		SECONDARY_START_POSITION,
 		11,
@@ -253,6 +374,7 @@ local function buildWarningGui()
 		secondaryLabel = secondaryLabel,
 		primaryConstraint = primaryConstraint,
 		secondaryConstraint = secondaryConstraint,
+		staticElements = {brand, brandMeta, brandLine, sequenceMeta},
 	}
 end
 
@@ -308,10 +430,78 @@ local function playMessage(gui, sequenceId: number, messageData, isLastMessage: 
 		playTween(gui.vignette, PANEL_FADE_OUT_INFO, {
 			BackgroundTransparency = 1,
 		})
+
+		for _, element in ipairs(gui.staticElements) do
+			if element:IsA("TextLabel") then
+				playTween(element, PANEL_FADE_OUT_INFO, {TextTransparency = 1})
+			else
+				playTween(element, PANEL_FADE_OUT_INFO, {BackgroundTransparency = 1})
+			end
+		end
 	end
 
 	waitForTween(MESSAGE_FADE_OUT_INFO)
 	return isSequenceActive(sequenceId, gui)
+end
+
+local function showGateMessage(gui, titleKey: string, detailKey: string, params)
+	gui.primaryLabel.Text = Localization.translate(titleKey, params, "en")
+	gui.secondaryLabel.Text = Localization.translate(detailKey, params, getSecondaryLanguageCode())
+	gui.primaryLabel.Position = PRIMARY_VISIBLE_POSITION
+	gui.secondaryLabel.Position = SECONDARY_VISIBLE_POSITION
+	gui.primaryLabel.TextTransparency = 0
+	gui.secondaryLabel.TextTransparency = 0
+end
+
+local function fadeOutGate(gui)
+	playTween(gui.primaryLabel, PANEL_FADE_OUT_INFO, {TextTransparency = 1})
+	playTween(gui.secondaryLabel, PANEL_FADE_OUT_INFO, {TextTransparency = 1})
+	playTween(gui.background, PANEL_FADE_OUT_INFO, {BackgroundTransparency = 1})
+	playTween(gui.vignette, PANEL_FADE_OUT_INFO, {BackgroundTransparency = 1})
+
+	for _, element in ipairs(gui.staticElements) do
+		if element:IsA("TextLabel") then
+			playTween(element, PANEL_FADE_OUT_INFO, {TextTransparency = 1})
+		else
+			playTween(element, PANEL_FADE_OUT_INFO, {BackgroundTransparency = 1})
+		end
+	end
+
+	waitForTween(PANEL_FADE_OUT_INFO)
+end
+
+local function waitForPartyRelease(sequenceId: number, gui)
+	if not loadingGateRemote then
+		return true
+	end
+
+	loadingGateRemote:FireServer({
+		Type = "Ready",
+		SequenceId = sequenceId,
+	})
+
+	local lastReady = -1
+	local lastTotal = -1
+
+	while isSequenceActive(sequenceId, gui) and not releasedSequences[sequenceId] do
+		local readyCount = math.max(0, latestGateStatus.Ready)
+		local totalCount = math.max(1, latestGateStatus.Total)
+
+		if readyCount ~= lastReady or totalCount ~= lastTotal then
+			showGateMessage(gui, "spawn.loading.waiting", "spawn.loading.status", {
+				ready = readyCount,
+				total = totalCount,
+			})
+			lastReady = readyCount
+			lastTotal = totalCount
+		end
+
+		task.wait(0.1)
+	end
+
+	local wasReleased = releasedSequences[sequenceId] == true
+	releasedSequences[sequenceId] = nil
+	return wasReleased
 end
 
 local function cleanupSequence(sequenceId: number, gui)
@@ -360,17 +550,11 @@ local function getCharacterRoot(character: Model)
 		or character.PrimaryPart
 end
 
-local function requestStreamAround(position: Vector3)
-	pcall(function()
-		player:RequestStreamAroundAsync(position)
-	end)
-end
-
-local function queryNearbyParts(position: Vector3, radius: number)
+local function queryNearbyParts(position: Vector3, radius: number, excludedInstance: Instance?)
 	local overlapParams = OverlapParams.new()
 	overlapParams.MaxParts = 0
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = {}
+	overlapParams.FilterDescendantsInstances = if excludedInstance then {excludedInstance} else {}
 
 	local success, parts = pcall(function()
 		return Workspace:GetPartBoundsInRadius(position, radius, overlapParams)
@@ -383,34 +567,152 @@ local function queryNearbyParts(position: Vector3, radius: number)
 	return {}
 end
 
+local function buildCriticalStreamPoints(rootPart: BasePart)
+	local origin = rootPart.Position
+	local forward = rootPart.CFrame.LookVector
+	local right = rootPart.CFrame.RightVector
+
+	return {
+		origin,
+		origin + (forward * CRITICAL_STREAM_OFFSET),
+		origin - (forward * CRITICAL_STREAM_OFFSET),
+		origin + (right * CRITICAL_STREAM_OFFSET),
+		origin - (right * CRITICAL_STREAM_OFFSET),
+	}
+end
+
+local function buildNearbyStreamPoints(rootPart: BasePart)
+	local origin = rootPart.Position
+	local forward = rootPart.CFrame.LookVector
+	local right = rootPart.CFrame.RightVector
+	local diagonalA = (forward + right).Unit
+	local diagonalB = (forward - right).Unit
+
+	return {
+		origin,
+		origin + (forward * NEARBY_STREAM_OFFSET),
+		origin - (forward * NEARBY_STREAM_OFFSET),
+		origin + (right * NEARBY_STREAM_OFFSET),
+		origin - (right * NEARBY_STREAM_OFFSET),
+		origin + (diagonalA * NEARBY_STREAM_OFFSET),
+		origin - (diagonalA * NEARBY_STREAM_OFFSET),
+		origin + (diagonalB * NEARBY_STREAM_OFFSET),
+		origin - (diagonalB * NEARBY_STREAM_OFFSET),
+	}
+end
+
+local function requestStreamPhase(sequenceId: number, phaseName: string, points)
+	if not loadingGateRemote then
+		local success, errorMessage = pcall(function()
+			for _, point in ipairs(points) do
+				player:RequestStreamAroundAsync(point, 4)
+			end
+		end)
+
+		return success, {
+			Success = success,
+			Error = if success then nil else tostring(errorMessage),
+			Completed = if success then #points else 0,
+			Total = #points,
+		}
+	end
+
+	streamRequestId += 1
+	local requestId = streamRequestId
+	local resultKey = getStreamResultKey(sequenceId, requestId)
+	local deadline = os.clock() + STREAM_REQUEST_TIMEOUT
+
+	loadingGateRemote:FireServer({
+		Type = "StreamRequest",
+		SequenceId = sequenceId,
+		RequestId = requestId,
+		Phase = phaseName,
+		Points = points,
+	})
+
+	while isCurrentSequence(sequenceId) and os.clock() < deadline do
+		local result = streamResults[resultKey]
+		if result then
+			streamResults[resultKey] = nil
+			return result.Success == true, result
+		end
+
+		task.wait(0.1)
+	end
+
+	streamResults[resultKey] = nil
+	return false, {
+		Success = false,
+		Error = "Timed out waiting for the server stream result",
+		Completed = 0,
+		Total = #points,
+	}
+end
+
+local function sampleLoadedArea(character: Model, radius: number)
+	local rootPart = getCharacterRoot(character)
+	if not rootPart or not rootPart:IsA("BasePart") then
+		return {
+			PartCount = 0,
+			FarthestDistance = 0,
+		}
+	end
+
+	local partCount = 0
+	local farthestDistance = 0
+	for _, part in ipairs(queryNearbyParts(rootPart.Position, radius, character)) do
+		if part:IsA("BasePart") then
+			partCount += 1
+			local centerDistance = (part.Position - rootPart.Position).Magnitude
+			local boundsReach = centerDistance + (part.Size.Magnitude * 0.5)
+			farthestDistance = math.max(farthestDistance, math.min(radius, boundsReach))
+		end
+	end
+
+	return {
+		PartCount = partCount,
+		FarthestDistance = farthestDistance,
+	}
+end
+
+local function waitForStableArea(sequenceId: number, character: Model, radius: number)
+	local deadline = os.clock() + AREA_STABILITY_TIMEOUT
+	local stableSamples = 0
+	local previousCount = nil
+	local latestSample = sampleLoadedArea(character, radius)
+
+	while isCurrentSequence(sequenceId) and os.clock() < deadline do
+		latestSample = sampleLoadedArea(character, radius)
+		local tolerance = math.max(2, math.floor(latestSample.PartCount * 0.01))
+		local countStable = previousCount ~= nil and math.abs(latestSample.PartCount - previousCount) <= tolerance
+		local enoughParts = latestSample.PartCount >= AREA_STABILITY_MIN_PARTS
+		local enoughCoverage = latestSample.FarthestDistance >= radius * AREA_STABILITY_MIN_COVERAGE
+
+		if countStable and enoughParts and enoughCoverage then
+			stableSamples += 1
+		else
+			stableSamples = 0
+		end
+
+		if stableSamples >= AREA_STABILITY_REQUIRED_SAMPLES then
+			return true, latestSample
+		end
+
+		previousCount = latestSample.PartCount
+		task.wait(AREA_STABILITY_INTERVAL)
+	end
+
+	return false, latestSample
+end
+
 local function collectSpawnAreaTargets(character: Model, targets, seen)
 	local rootPart = getCharacterRoot(character)
-	if not rootPart then
+	if not rootPart or not rootPart:IsA("BasePart") then
 		return
 	end
 
-	local origin = rootPart.Position
-	local lookVector = rootPart.CFrame.LookVector
-
-	for _, distance in ipairs(PRELOAD_STREAM_DISTANCES) do
-		local samplePosition = origin + (lookVector * distance)
-		requestStreamAround(samplePosition)
-
-		for _, part in ipairs(queryNearbyParts(samplePosition, PRELOAD_NEAR_RADIUS)) do
-			collectPreloadableDescendants(part, targets, seen)
-		end
-	end
-
-	for _, part in ipairs(queryNearbyParts(origin, PRELOAD_VIEW_RADIUS)) do
-		local toPart = part.Position - origin
-		local distance = toPart.Magnitude
-
-		if distance > 0 then
-			local facingScore = lookVector:Dot(toPart.Unit)
-			if facingScore >= 0.15 then
-				collectPreloadableDescendants(part, targets, seen)
-			end
-		end
+	for _, part in ipairs(queryNearbyParts(rootPart.Position, CRITICAL_LOAD_RADIUS, character)) do
+		collectPreloadableDescendants(part, targets, seen)
 	end
 end
 
@@ -451,8 +753,8 @@ local function collectLightingTargets(character: Model, targets, seen)
 	end
 
 	local rootPart = getCharacterRoot(character)
-	if rootPart then
-		for _, part in ipairs(queryNearbyParts(rootPart.Position, PRELOAD_NEAR_RADIUS)) do
+	if rootPart and rootPart:IsA("BasePart") then
+		for _, part in ipairs(queryNearbyParts(rootPart.Position, CRITICAL_LOAD_RADIUS, character)) do
 			for _, descendant in ipairs(part:GetDescendants()) do
 				if descendant:IsA("Sound") then
 					addPreloadTarget(targets, seen, descendant)
@@ -465,6 +767,87 @@ local function collectLightingTargets(character: Model, targets, seen)
 	if sharedFolder then
 		collectPreloadableDescendants(sharedFolder:FindFirstChild("Phone"), targets, seen)
 	end
+end
+
+local function waitForRenderFrames(sequenceId: number, frameCount: number)
+	for _ = 1, frameCount do
+		if not isCurrentSequence(sequenceId) then
+			return false
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	return true
+end
+
+local function warmCriticalRender(sequenceId: number, character: Model)
+	local rootPart = getCharacterRoot(character)
+	local camera = Workspace.CurrentCamera
+	if not rootPart or not rootPart:IsA("BasePart") or not camera then
+		return false, "Camera or character root is unavailable"
+	end
+
+	local startedAt = os.clock()
+	local originalType = camera.CameraType
+	local originalSubject = camera.CameraSubject
+	local originalCFrame = camera.CFrame
+	local originalFieldOfView = camera.FieldOfView
+	local cameraPosition = rootPart.Position + Vector3.new(0, 3.5, 0)
+	local baseForward = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
+
+	if baseForward.Magnitude < 0.001 then
+		baseForward = Vector3.new(0, 0, -1)
+	else
+		baseForward = baseForward.Unit
+	end
+
+	local success, errorMessage = pcall(function()
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = RENDER_WARMUP_FIELD_OF_VIEW
+
+		for viewIndex = 0, RENDER_WARMUP_VIEWS - 1 do
+			local direction = CFrame.Angles(0, math.rad(90 * viewIndex), 0):VectorToWorldSpace(baseForward)
+			local lookTarget = cameraPosition + direction + Vector3.new(0, -0.15, 0)
+			local targetCFrame = CFrame.lookAt(cameraPosition, lookTarget)
+
+			for _ = 1, RENDER_WARMUP_FRAMES_PER_VIEW do
+				camera.CFrame = targetCFrame
+				if not waitForRenderFrames(sequenceId, 1) then
+					error("Loading sequence changed during render warm-up")
+				end
+			end
+		end
+	end)
+
+	camera.CameraType = originalType
+	camera.CameraSubject = originalSubject
+	camera.CFrame = originalCFrame
+	camera.FieldOfView = originalFieldOfView
+
+	if success then
+		success = waitForRenderFrames(sequenceId, RENDER_WARMUP_FINAL_FRAMES)
+		if not success then
+			errorMessage = "Loading sequence changed while restoring the camera"
+		end
+	end
+
+	if not success then
+		return false, tostring(errorMessage)
+	end
+
+	local duration = os.clock() - startedAt
+	print(("[SpawnLoadingScreen][RenderWarmup v1] views=%d frames=%d duration=%.2fs"):format(
+		RENDER_WARMUP_VIEWS,
+		(RENDER_WARMUP_VIEWS * RENDER_WARMUP_FRAMES_PER_VIEW) + RENDER_WARMUP_FINAL_FRAMES,
+		duration
+	))
+
+	return true, {
+		Views = RENDER_WARMUP_VIEWS,
+		Frames = (RENDER_WARMUP_VIEWS * RENDER_WARMUP_FRAMES_PER_VIEW) + RENDER_WARMUP_FINAL_FRAMES,
+		Duration = duration,
+	}
 end
 
 local function primePlayerControls(character: Model)
@@ -523,10 +906,16 @@ end
 
 local function preloadTargets(sequenceId: number, targets)
 	local startIndex = 1
+	local stats = {
+		Requested = #targets,
+		Fetched = 0,
+		FailedAssets = 0,
+		FailedBatches = 0,
+	}
 
 	while startIndex <= #targets do
 		if not isCurrentSequence(sequenceId) then
-			return
+			return stats
 		end
 
 		local batch = {}
@@ -540,46 +929,151 @@ local function preloadTargets(sequenceId: number, targets)
 		end
 
 		if #batch > 0 then
-			pcall(function()
-				ContentProvider:PreloadAsync(batch)
+			local success, errorMessage = pcall(function()
+				ContentProvider:PreloadAsync(batch, function(_, fetchStatus)
+					if fetchStatus == Enum.AssetFetchStatus.Success then
+						stats.Fetched += 1
+					else
+						stats.FailedAssets += 1
+					end
+				end)
 			end)
+
+			if not success then
+				stats.FailedBatches += 1
+				warn(("[SpawnLoadingScreen][RadialLoad v1] Preload batch failed: %s"):format(tostring(errorMessage)))
+			end
 		end
 
 		startIndex = endIndex + 1
 		task.wait(PRELOAD_BATCH_DELAY)
 	end
+
+	return stats
 end
 
 local function runPriorityPreload(sequenceId: number, character: Model)
 	local seen = {}
+	local totals = {
+		Requested = 0,
+		Fetched = 0,
+		FailedAssets = 0,
+		FailedBatches = 0,
+	}
+
+	local function addStats(stats)
+		if not stats then
+			return
+		end
+
+		for key in pairs(totals) do
+			totals[key] += stats[key] or 0
+		end
+	end
 
 	local mapTargets = {}
 	collectSpawnAreaTargets(character, mapTargets, seen)
-	preloadTargets(sequenceId, mapTargets)
+	addStats(preloadTargets(sequenceId, mapTargets))
 
 	if not isCurrentSequence(sequenceId) then
-		return
+		return totals
 	end
 
 	local lightingTargets = {}
 	collectLightingTargets(character, lightingTargets, seen)
-	preloadTargets(sequenceId, lightingTargets)
+	addStats(preloadTargets(sequenceId, lightingTargets))
 
 	if not isCurrentSequence(sequenceId) then
-		return
+		return totals
 	end
 
 	local playerSystemTargets = {}
 	collectPlayerSystemTargets(character, playerSystemTargets, seen)
-	preloadTargets(sequenceId, playerSystemTargets)
+	addStats(preloadTargets(sequenceId, playerSystemTargets))
 
 	if not isCurrentSequence(sequenceId) then
-		return
+		return totals
 	end
 
 	local uiTargets = {}
 	collectImportantUiTargets(uiTargets, seen)
-	preloadTargets(sequenceId, uiTargets)
+	addStats(preloadTargets(sequenceId, uiTargets))
+
+	return totals
+end
+
+local function runCriticalLoadAttempt(sequenceId: number, character: Model)
+	local rootPart = getCharacterRoot(character)
+	if not rootPart or not rootPart:IsA("BasePart") then
+		return false, "Character root is unavailable"
+	end
+
+	local phaseStartedAt = os.clock()
+	local streamSucceeded, streamResult = requestStreamPhase(
+		sequenceId,
+		"Critical",
+		buildCriticalStreamPoints(rootPart)
+	)
+
+	if not streamSucceeded then
+		return false, streamResult.Error or "Server streaming request failed"
+	end
+
+	local areaStable, areaSample = waitForStableArea(sequenceId, character, CRITICAL_LOAD_RADIUS)
+	if not areaStable then
+		return false, ("Area did not stabilize (parts=%d farthest=%.1f)"):format(
+			areaSample.PartCount,
+			areaSample.FarthestDistance
+		)
+	end
+
+	local preloadStats = runPriorityPreload(sequenceId, character)
+	local renderReady, renderStats = warmCriticalRender(sequenceId, character)
+	if not renderReady then
+		return false, ("Render warm-up failed: %s"):format(tostring(renderStats))
+	end
+
+	local duration = os.clock() - phaseStartedAt
+	print(("[SpawnLoadingScreen][RadialLoad v2] phase=Critical renderReady=true radius=%d parts=%d farthest=%.1f targets=%d fetched=%d failedAssets=%d failedBatches=%d renderFrames=%d duration=%.2fs"):format(
+		CRITICAL_LOAD_RADIUS,
+		areaSample.PartCount,
+		areaSample.FarthestDistance,
+		preloadStats.Requested,
+		preloadStats.Fetched,
+		preloadStats.FailedAssets,
+		preloadStats.FailedBatches,
+		renderStats.Frames,
+		duration
+	))
+
+	return true, {
+		Area = areaSample,
+		Preload = preloadStats,
+		Render = renderStats,
+		Duration = duration,
+	}
+end
+
+local function runNearbyBackgroundLoad(sequenceId: number, character: Model)
+	local rootPart = getCharacterRoot(character)
+	if not rootPart or not rootPart:IsA("BasePart") or not isCurrentSequence(sequenceId) then
+		return
+	end
+
+	local startedAt = os.clock()
+	local succeeded, result = requestStreamPhase(sequenceId, "Nearby", buildNearbyStreamPoints(rootPart))
+	if not succeeded then
+		warn(("[SpawnLoadingScreen][RadialLoad v1] phase=Nearby failed: %s"):format(tostring(result.Error)))
+		return
+	end
+
+	local sample = sampleLoadedArea(character, NEARBY_LOAD_RADIUS)
+	print(("[SpawnLoadingScreen][RadialLoad v1] phase=Nearby requested radius=%d parts=%d farthest=%.1f duration=%.2fs"):format(
+		NEARBY_LOAD_RADIUS,
+		sample.PartCount,
+		sample.FarthestDistance,
+		os.clock() - startedAt
+	))
 end
 
 local function showLoadingScreen(character: Model)
@@ -589,9 +1083,34 @@ local function showLoadingScreen(character: Model)
 	setAllCoreGuiEnabled(false)
 
 	local gui = buildWarningGui()
+	local criticalLoad = {
+		Finished = false,
+		Success = false,
+		Attempt = 0,
+		Error = nil,
+		Stats = nil,
+	}
 
 	task.spawn(function()
-		runPriorityPreload(sequenceId, character)
+		while isSequenceActive(sequenceId, gui) and not criticalLoad.Success do
+			criticalLoad.Attempt += 1
+			local callSucceeded, loadSucceeded, result = pcall(runCriticalLoadAttempt, sequenceId, character)
+
+			if callSucceeded and loadSucceeded then
+				criticalLoad.Success = true
+				criticalLoad.Stats = result
+				criticalLoad.Error = nil
+			else
+				criticalLoad.Error = if callSucceeded then tostring(result) else tostring(loadSucceeded)
+				warn(("[SpawnLoadingScreen][RadialLoad v1] Critical attempt %d failed: %s"):format(
+					criticalLoad.Attempt,
+					criticalLoad.Error
+				))
+				task.wait(LOAD_RETRY_DELAY)
+			end
+		end
+
+		criticalLoad.Finished = criticalLoad.Success or not isSequenceActive(sequenceId, gui)
 	end)
 
 	task.wait(INTRO_DELAY)
@@ -602,7 +1121,7 @@ local function showLoadingScreen(character: Model)
 
 	for index, messageData in ipairs(messageSequence) do
 		local isLastMessage = index == #messageSequence
-		local completed = playMessage(gui, sequenceId, messageData, isLastMessage)
+		local completed = playMessage(gui, sequenceId, messageData, false)
 
 		if not completed then
 			return
@@ -617,7 +1136,42 @@ local function showLoadingScreen(character: Model)
 		end
 	end
 
+	showGateMessage(gui, "spawn.loading.title", "spawn.loading.radius", {
+		radius = CRITICAL_LOAD_RADIUS,
+		attempt = criticalLoad.Attempt,
+	})
+	local gateShownAt = os.clock()
+	local displayedAttempt = criticalLoad.Attempt
+
+	while isSequenceActive(sequenceId, gui) and not criticalLoad.Finished do
+		if criticalLoad.Attempt ~= displayedAttempt then
+			showGateMessage(gui, "spawn.loading.title", "spawn.loading.radius", {
+				radius = CRITICAL_LOAD_RADIUS,
+				attempt = criticalLoad.Attempt,
+			})
+			displayedAttempt = criticalLoad.Attempt
+		end
+
+		task.wait(0.1)
+	end
+
+	if not isSequenceActive(sequenceId, gui) or not criticalLoad.Success then
+		return
+	end
+
+	local remainingDisplayTime = MIN_GATE_DISPLAY_TIME - (os.clock() - gateShownAt)
+	if remainingDisplayTime > 0 then
+		task.wait(remainingDisplayTime)
+	end
+
+	if not isSequenceActive(sequenceId, gui) or not waitForPartyRelease(sequenceId, gui) then
+		return
+	end
+
+	fadeOutGate(gui)
 	cleanupSequence(sequenceId, gui)
+
+	task.spawn(runNearbyBackgroundLoad, sequenceId, character)
 end
 
 local function onCharacterAdded(character: Model)
@@ -630,3 +1184,5 @@ player.CharacterAdded:Connect(onCharacterAdded)
 if player.Character then
 	onCharacterAdded(player.Character)
 end
+
+SystemHub.ready("SpawnLoadingScreen", script)
