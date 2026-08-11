@@ -3,4 +3,10 @@ Thumbs.db
 Desktop.ini
 
 *.blend1
+*.blend
+*.glb
+*.gltf
 *.tmp
+
+blender/
+output/exports/

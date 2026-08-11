@@ -65,10 +65,7 @@ Repository นี้มีไฟล์ Roblox Studio สำหรับตรว
 
 ```text
 .
-├── blender/
-│   └── thai_spirit_house.py     # สร้างโมเดลศาลไทยด้วย Blender
 ├── output/
-│   ├── exports/                 # ไฟล์ .blend และ .glb
 │   └── renders/                 # ภาพเรนเดอร์สำหรับอ้างอิง
 └── tmp/
     ├── Roblox-validation.rbxlx  # Place สำหรับตรวจสอบต้นแบบ
@@ -79,9 +76,6 @@ Repository นี้มีไฟล์ Roblox Studio สำหรับตรว
         └── shared/              # Config, ข้อมูลเนื้อเรื่อง และ Localization
 ```
 
-## งานภาพและสภาพแวดล้อม
-
-โมเดลศาลไทยใน repository สร้างแบบ procedural ด้วย Blender และส่งออกเป็น `.blend` กับ `.glb` เพื่อใช้เป็นแนวทางสำหรับสภาพแวดล้อมและฉากพิธีกรรม
 
 
 ## คำเตือนเนื้อหา
