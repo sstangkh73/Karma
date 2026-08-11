@@ -349,6 +349,11 @@ function InteractionService:registerDefaultHandlers()
 				Key = "interaction.feedback.missing_note_id",
 			}
 		end
+		if noteId == "note_5" and Workspace:GetAttribute("TeacherDeskUnlocked") ~= true then
+			return false, {
+				Message = "ลิ้นชักยังล็อกอยู่",
+			}
+		end
 
 		if not NoteData.getNoteById(noteId) then
 			return false, {

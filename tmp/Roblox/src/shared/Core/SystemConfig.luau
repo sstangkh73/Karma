@@ -30,6 +30,13 @@ local SystemConfig = {
 			Priority = 20,
 			Description = "Owns and restores the global night lighting preset.",
 		},
+		CutsceneAssetService = {
+			Side = "Server",
+			Kind = "Service",
+			Enabled = true,
+			Priority = 25,
+			Description = "Loads camera cutscene assets into ReplicatedStorage for client playback.",
+		},
 		ObjectiveService = {
 			Side = "Server",
 			Kind = "Service",
@@ -44,6 +51,14 @@ local SystemConfig = {
 			Priority = 40,
 			IntegratesWith = { "ObjectiveService", "InteractionService" },
 			Description = "Owns authoritative inventory and held-item state.",
+		},
+		AdminCommandService = {
+			Side = "Server",
+			Kind = "Service",
+			Enabled = true,
+			Priority = 75,
+			Dependencies = { "InventoryService", "TeacherDeskLockService" },
+			Description = "Runs permission-gated testing commands through TextChatService.",
 		},
 		InteractionService = {
 			Side = "Server",
@@ -68,6 +83,14 @@ local SystemConfig = {
 			Priority = 65,
 			IntegratesWith = { "InteractionService", "ObjectiveTriggerService" },
 			Description = "Routes note, reach-point, and custom events into authoritative dialogue sequences.",
+		},
+		TeacherDeskLockService = {
+			Side = "Server",
+			Kind = "Service",
+			Enabled = true,
+			Priority = 70,
+			Dependencies = { "ObjectiveService", "DialogueService" },
+			Description = "Owns the dance-room key pickup and teacher-desk lock sequence.",
 		},
 
 		-- Client
@@ -94,6 +117,14 @@ local SystemConfig = {
 			Priority = 20,
 			IntegratesWith = { "InventoryService" },
 			Description = "Renders inventory UI and sends inventory requests.",
+		},
+		AdminCommandController = {
+			Side = "Client",
+			Kind = "Controller",
+			Enabled = true,
+			Priority = 25,
+			IntegratesWith = { "AdminCommandService" },
+			Description = "Displays private admin command feedback in the local chat window.",
 		},
 		InteractionController = {
 			Side = "Client",

@@ -48,6 +48,13 @@ local InventoryClient = {
 	},
 }
 
+local LOBBY_PLACE_ID = 99041403537198
+
+if game.PlaceId == LOBBY_PLACE_ID then
+	SystemHub.ready("InventorySystem", script)
+	return
+end
+
 local function isPointInside(frame: GuiObject, point: Vector2)
 	local position = frame.AbsolutePosition
 	local size = frame.AbsoluteSize

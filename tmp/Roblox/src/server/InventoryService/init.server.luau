@@ -83,6 +83,16 @@ if not placeQuestItemBindable then
 	placeQuestItemBindable.Parent = serverApiFolder
 end
 
+local grantItemByDefinitionBindable = serverApiFolder:FindFirstChild("GrantItemByDefinitionId")
+if not grantItemByDefinitionBindable then
+	grantItemByDefinitionBindable = Instance.new("BindableFunction")
+	grantItemByDefinitionBindable.Name = "GrantItemByDefinitionId"
+	grantItemByDefinitionBindable.Parent = serverApiFolder
+end
+if not grantItemByDefinitionBindable:IsA("BindableFunction") then
+	error("[InventoryService] InventoryServerApi.GrantItemByDefinitionId must be a BindableFunction")
+end
+
 local pickupWorldToolBindable = serverApiFolder:FindFirstChild("PickupWorldTool")
 if not pickupWorldToolBindable then
 	pickupWorldToolBindable = Instance.new("BindableFunction")
@@ -450,6 +460,21 @@ function InventoryService:addInventoryItem(playerState, definitionId: string, ro
 	self:pushState(playerState.Player)
 
 	return true, itemState
+end
+
+function InventoryService:grantItemByDefinitionId(player: Player, definitionId: string)
+	if not player or player.Parent ~= Players then
+		return false, "Invalid player"
+	end
+
+	local playerState = self.playerStates[player]
+	if not playerState then
+		playerState = self:createPlayerState(player)
+	end
+
+	return self:addInventoryItem(playerState, definitionId, false, {
+		GrantedByServer = true,
+	})
 end
 
 function InventoryService:serializeState(playerState)
@@ -1290,6 +1315,10 @@ placeQuestItemBindable.OnInvoke = function(player, definitionId, zoneInstance, p
 		zoneInstance,
 		placementOffset
 	)
+end
+
+grantItemByDefinitionBindable.OnInvoke = function(player, definitionId)
+	return InventoryService:grantItemByDefinitionId(player, tostring(definitionId))
 end
 
 pickupWorldToolBindable.OnInvoke = function(player, tool)

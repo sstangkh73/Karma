@@ -8,11 +8,14 @@
 --    th, en, zh-cn, es, pt-br, fr, de, ru, ko, id.
 -- 5. Keep names in English transliteration in every language, for example `Win`.
 -- 6. Keep Buddhist/moral weight terms such as บาป/กรรม as `KARMA`.
--- 7. Optional: add a handwriting image asset.
+-- 7. Choose one view type:
+--    `text` uses localized title/body in the normal reader.
+--    `image` uses image/imageAspectRatio in the zoomable image viewer.
 
 return {
 	{
 		id = "note_0",
+		viewType = "text",
 		title = {
 			th = "บันทึกทดสอบระบบ",
 			en = "System Test Note",
@@ -123,6 +126,7 @@ Tolong ingat bahwa tidak semua hal seperti yang terlihat.
 	},
 	{
 		id = "note_1",
+		viewType = "text",
 		title = {
 			th = "จดหมายสำหรับ 'คน'",
 			en = "Letter for a Person",
@@ -209,10 +213,11 @@ KARMA kamu ada tepat di sana, di tempat kamu menguburnya.
 		},
 		titleKey = "notes.note_1.title",
 		typedTextKey = "notes.note_1.body",
-		handwritingImage = "rbxassetid://0",
+		handwritingImage = "rbxassetid://94019106857716",
 	},
 	{
 		id = "note_2",
+		viewType = "text",
 		title = {
 			th = "จดหมายถึง วิน",
 			en = "Letter to Win",
@@ -259,10 +264,11 @@ KARMA kamu ada tepat di sana, di tempat kamu menguburnya.
 		},
 		titleKey = "notes.note_2.title",
 		typedTextKey = "notes.note_2.body",
-		handwritingImage = "rbxassetid://0",
+		handwritingImage = "rbxassetid://127081649027507",
 	},
 	{
 		id = "note_3",
+		viewType = "text",
 		title = {
 			th = "ทางที่ซ่อนอยู่",
 			en = "The Hidden Path",
@@ -339,7 +345,7 @@ yang membuat kita dapat melanjutkan perjalanan.]],
 		},
 		titleKey = "notes.note_3.title",
 		typedTextKey = "notes.note_3.body",
-		handwritingImage = "rbxassetid://0",
+		handwritingImage = "rbxassetid://118635730873338",
 	},
 	{
 		id = "note_4",
@@ -370,5 +376,35 @@ yang membuat kita dapat melanjutkan perjalanan.]],
 		viewType = "image",
 		image = "rbxassetid://135936162829416",
 		imageAspectRatio = 2 / 3,
+	},
+	{
+		id = "note_5",
+		viewType = "image",
+		title = {
+			th = "แฟ้มหลักฐานการก่อสร้าง",
+			en = "Construction Evidence File",
+			["zh-cn"] = "建筑证据档案",
+			es = "Expediente de pruebas de construccion",
+			["pt-br"] = "Arquivo de provas da construcao",
+			fr = "Dossier de preuves de construction",
+			de = "Bau-Beweisakte",
+			ru = "Досье строительных доказательств",
+			ko = "건설 증거 파일",
+			id = "Berkas Bukti Konstruksi",
+		},
+		body = {
+			th = "ใบตรวจรับและสำเนาใบส่งมอบวัสดุ",
+			en = "Final inspection certificate and material delivery copy.",
+			["zh-cn"] = "最终验收证明和材料交付单副本。",
+			es = "Certificado de inspeccion final y copia de entrega de materiales.",
+			["pt-br"] = "Certificado de inspecao final e copia da entrega de materiais.",
+			fr = "Certificat d'inspection finale et copie de livraison des materiaux.",
+			de = "Abnahmebescheinigung und Kopie des Materiallieferscheins.",
+			ru = "Акт окончательной приёмки и копия поставки материалов.",
+			ko = "최종 검수 증명서와 자재 납품서 사본.",
+			id = "Sertifikat pemeriksaan akhir dan salinan pengiriman bahan.",
+		},
+		image = "rbxassetid://114904176726241",
+		imageAspectRatio = 943 / 1664,
 	},
 }

@@ -1,7 +1,12 @@
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -23,6 +28,7 @@ local DialogueController = {
 	isTyping = false,
 	advanceRequested = false,
 	lastInputAt = 0,
+	isEndingDemo = false,
 }
 
 local settings = DialogueData.getSettings()
@@ -228,12 +234,65 @@ function DialogueController:createGui()
 	end)
 end
 
+function DialogueController:createEndDemoGui()
+	local existing = playerGui:FindFirstChild("EndDemoScreenGui")
+	if existing then
+		existing:Destroy()
+	end
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "EndDemoScreenGui"
+	screenGui.DisplayOrder = 130
+	screenGui.IgnoreGuiInset = true
+	screenGui.ResetOnSpawn = false
+	screenGui.Enabled = false
+	screenGui.Parent = playerGui
+
+	local fade = Instance.new("Frame")
+	fade.Name = "Fade"
+	fade.Size = UDim2.fromScale(1, 1)
+	fade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	fade.BackgroundTransparency = 1
+	fade.BorderSizePixel = 0
+	fade.Parent = screenGui
+
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.AnchorPoint = Vector2.new(0.5, 0.5)
+	title.Position = UDim2.fromScale(0.5, 0.5)
+	title.Size = UDim2.new(0.72, 0, 0, 86)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.GothamBold
+	title.Text = ""
+	title.TextColor3 = Color3.fromRGB(239, 233, 218)
+	title.TextScaled = true
+	title.TextTransparency = 1
+	title.TextWrapped = true
+	title.ZIndex = 2
+	title.Parent = fade
+
+	local textSize = Instance.new("UITextSizeConstraint")
+	textSize.MinTextSize = 20
+	textSize.MaxTextSize = 44
+	textSize.Parent = title
+
+	self.endDemoGui = {
+		ScreenGui = screenGui,
+		Fade = fade,
+		Title = title,
+	}
+end
+
 function DialogueController:isBlockingUiOpen()
 	local noteGui = playerGui:FindFirstChild("NoteScreenGui")
 	return noteGui and noteGui:IsA("ScreenGui") and noteGui.Enabled
 end
 
 function DialogueController:requestAdvance()
+	if self.isEndingDemo then
+		return
+	end
+
 	local cooldown = settings.InputCooldown or 0.12
 	local now = os.clock()
 	if now - self.lastInputAt < cooldown or not self.activeSequenceId then
@@ -250,7 +309,7 @@ function DialogueController:requestAdvance()
 end
 
 function DialogueController:cancelActive(result: string?)
-	if not self.activeSequenceId then
+	if self.isEndingDemo or not self.activeSequenceId then
 		return
 	end
 
@@ -272,6 +331,208 @@ function DialogueController:cancelActive(result: string?)
 	task.defer(function()
 		self:playNext()
 	end)
+end
+
+function DialogueController:lockEndDemoUi()
+	for _, child in ipairs(playerGui:GetChildren()) do
+		if child:IsA("ScreenGui") and child.Name ~= "EndDemoScreenGui" then
+			child.Enabled = false
+		end
+	end
+
+	for _, descendant in ipairs(playerGui:GetDescendants()) do
+		if descendant:IsA("GuiButton") then
+			descendant.Active = false
+			descendant.Selectable = false
+			descendant.AutoButtonColor = false
+		end
+	end
+
+	ProximityPromptService.Enabled = false
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+	end)
+end
+
+function DialogueController:findEndDemoCutscene(config)
+	local cutsceneName = if typeof(config.CameraCutsceneName) == "string" and config.CameraCutsceneName ~= ""
+		then config.CameraCutsceneName
+		else "END_DEMO"
+	local assetId = tostring(config.CameraCutsceneAssetId or "")
+	local roots = { ReplicatedStorage, ReplicatedFirst, Workspace }
+
+	for _, root in ipairs(roots) do
+		local direct = root:FindFirstChild(cutsceneName)
+		if direct then
+			return direct
+		end
+	end
+
+	for _, root in ipairs(roots) do
+		for _, descendant in ipairs(root:GetDescendants()) do
+			if descendant.Name == cutsceneName
+				or (assetId ~= "" and (descendant.Name == assetId or descendant:GetAttribute("AssetId") == assetId)) then
+				return descendant
+			end
+		end
+	end
+
+	return nil
+end
+
+function DialogueController:readCameraFrameCFrame(instance: Instance)
+	if instance:IsA("CFrameValue") then
+		return instance.Value
+	end
+	if instance:IsA("BasePart") then
+		return instance.CFrame
+	end
+	if instance:IsA("Camera") then
+		return instance.CFrame
+	end
+
+	local cframeAttribute = instance:GetAttribute("CFrame")
+	if typeof(cframeAttribute) == "CFrame" then
+		return cframeAttribute
+	end
+
+	local nestedValue = instance:FindFirstChildWhichIsA("CFrameValue", true)
+	if nestedValue then
+		return nestedValue.Value
+	end
+
+	return nil
+end
+
+function DialogueController:collectCameraFrames(cutscene: Instance, framesPerSecond: number)
+	local cframeRoot = cutscene:FindFirstChild("CFrame", true) or cutscene
+	local frames = {}
+
+	for _, child in ipairs(cframeRoot:GetChildren()) do
+		local frameNumber = tonumber(child.Name)
+		local cameraCFrame = if frameNumber then self:readCameraFrameCFrame(child) else nil
+		if frameNumber and cameraCFrame then
+			table.insert(frames, {
+				Time = frameNumber / framesPerSecond,
+				CFrame = cameraCFrame,
+			})
+		end
+	end
+
+	table.sort(frames, function(left, right)
+		return left.Time < right.Time
+	end)
+
+	if #frames > 0 then
+		local startTime = frames[1].Time
+		for _, frame in ipairs(frames) do
+			frame.Time -= startTime
+		end
+	end
+
+	return frames
+end
+
+function DialogueController:playEndDemoCamera(config, generation: number)
+	local cutscene = self:findEndDemoCutscene(config)
+	if not cutscene then
+		warn("[DialogueController] End demo camera cutscene END_DEMO was not found in ReplicatedStorage, ReplicatedFirst, or Workspace.")
+		return
+	end
+
+	local framesPerSecond = if typeof(config.CameraFramesPerSecond) == "number" and config.CameraFramesPerSecond > 0
+		then config.CameraFramesPerSecond
+		else 60
+	local frames = self:collectCameraFrames(cutscene, framesPerSecond)
+	if #frames == 0 then
+		warn(("[DialogueController] End demo camera cutscene %s has no readable CFrame frames."):format(cutscene:GetFullName()))
+		return
+	end
+
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return
+	end
+
+	local originalType = camera.CameraType
+	local originalSubject = camera.CameraSubject
+	camera.CameraType = Enum.CameraType.Scriptable
+	camera.CFrame = frames[1].CFrame
+
+	local startedAt = os.clock()
+	local frameIndex = 1
+	local totalDuration = if #frames > 1 then frames[#frames].Time else 2
+
+	while generation == self.generation and os.clock() - startedAt < totalDuration do
+		local elapsed = os.clock() - startedAt
+		while frameIndex < #frames and frames[frameIndex + 1].Time <= elapsed do
+			frameIndex += 1
+		end
+
+		local currentFrame = frames[frameIndex]
+		local nextFrame = frames[math.min(frameIndex + 1, #frames)]
+		if currentFrame and nextFrame and nextFrame.Time > currentFrame.Time then
+			local alpha = math.clamp((elapsed - currentFrame.Time) / (nextFrame.Time - currentFrame.Time), 0, 1)
+			camera.CFrame = currentFrame.CFrame:Lerp(nextFrame.CFrame, alpha)
+		elseif currentFrame then
+			camera.CFrame = currentFrame.CFrame
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	camera.CFrame = frames[#frames].CFrame
+	camera.CameraSubject = originalSubject
+	camera.CameraType = originalType
+end
+
+function DialogueController:playEndDemo(sequence, generation: number)
+	local config = sequence.EndDemo
+	if typeof(config) ~= "table" or self.isEndingDemo then
+		return
+	end
+
+	self.isEndingDemo = true
+	local holdBeforeAnimation = if typeof(config.HoldBeforeAnimation) == "number" then config.HoldBeforeAnimation else 2.5
+	if holdBeforeAnimation > 0 then
+		task.wait(holdBeforeAnimation)
+	end
+	if generation ~= self.generation or self.activeSequenceId ~= sequence.Id then
+		self.isEndingDemo = false
+		return
+	end
+
+	self.gui.ScreenGui.Enabled = false
+	self:lockEndDemoUi()
+	self:playEndDemoCamera(config, generation)
+	if generation ~= self.generation or self.activeSequenceId ~= sequence.Id then
+		self.isEndingDemo = false
+		return
+	end
+
+	local endGui = self.endDemoGui
+	endGui.Title.Text = if typeof(config.Text) == "string" and config.Text ~= "" then config.Text else "END_DEMO"
+	endGui.Fade.BackgroundTransparency = 1
+	endGui.Title.TextTransparency = 1
+	endGui.ScreenGui.Enabled = true
+
+	local fadeDuration = if typeof(config.FadeDuration) == "number" then config.FadeDuration else 2.5
+	local fadeTween = TweenService:Create(
+		endGui.Fade,
+		TweenInfo.new(fadeDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+		{ BackgroundTransparency = 0 }
+	)
+	fadeTween:Play()
+	fadeTween.Completed:Wait()
+
+	local titleTween = TweenService:Create(
+		endGui.Title,
+		TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ TextTransparency = 0 }
+	)
+	titleTween:Play()
+	titleTween.Completed:Wait()
+	self.isEndingDemo = false
 end
 
 function DialogueController:typeLine(text: string, generation: number, characterDelay: number?)
@@ -365,6 +626,7 @@ function DialogueController:runSequence(sequenceId: string)
 	end
 
 	if generation == self.generation and self.activeSequenceId == sequenceId then
+		self:playEndDemo(sequence, generation)
 		self:finishActive("Completed")
 		self:playNext()
 	end
@@ -413,6 +675,7 @@ end
 
 function DialogueController:Init()
 	self:createGui()
+	self:createEndDemoGui()
 	self.remote = RemoteGateway.waitForRemote("GameRemotes", "DialogueEvent", "RemoteEvent", 15)
 	if not self.remote then
 		error("DialogueEvent was not created")

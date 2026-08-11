@@ -1,6 +1,6 @@
--- NoteGui: สร้าง ScreenGui สำหรับระบบอ่านโน้ต 2 ชั้น
--- ชั้น 1: รูปภาพลายมือ (ImageLabel) บนกระดาษ
--- ชั้น 2: พื้นหลังมืดโปร่งแสง + ข้อความสีขาว (แบบเกม horror)
+-- NoteGui: สร้าง ScreenGui ที่มีตัวอ่านโน้ตแยก 2 ประเภท
+-- image: ภาพเอกสารใน viewport ที่ซูมและลากได้
+-- text: ข้อความแปลภาษาในพื้นหลังมืด
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -35,7 +35,7 @@ function NoteGui.create()
 	overlay.Parent = screenGui
 
 	-- ========================================
-	-- ชั้นที่ 1: กรอบกระดาษ + รูปลายมือ
+	-- ตัวอ่านโน้ตภาพ
 	-- ========================================
 	local noteFrame = Instance.new("Frame")
 	noteFrame.Name = "NoteFrame"
@@ -64,22 +64,23 @@ function NoteGui.create()
 	imageViewport.Parent = noteFrame
 
 	-- รูปโน้ตอยู่ใน viewport เพื่อรองรับการซูมและลาก
-	local handwritingLayer = Instance.new("ImageLabel")
-	handwritingLayer.Name = "HandwritingLayer"
-	handwritingLayer.Size = UDim2.fromScale(1, 1)
-	handwritingLayer.AnchorPoint = Vector2.new(0.5, 0.5)
-	handwritingLayer.Position = UDim2.fromScale(0.5, 0.5)
-	handwritingLayer.BackgroundTransparency = 1
-	handwritingLayer.ScaleType = Enum.ScaleType.Fit
-	handwritingLayer.ZIndex = 4
-	handwritingLayer.Image = ""
-	handwritingLayer.Parent = imageViewport
+	local imageLayer = Instance.new("ImageLabel")
+	imageLayer.Name = "ImageLayer"
+	imageLayer.Size = UDim2.fromScale(1, 1)
+	imageLayer.AnchorPoint = Vector2.new(0.5, 0.5)
+	imageLayer.Position = UDim2.fromScale(0.5, 0.5)
+	imageLayer.BackgroundTransparency = 1
+	imageLayer.ScaleType = Enum.ScaleType.Fit
+	imageLayer.ZIndex = 4
+	imageLayer.Image = ""
+	imageLayer.Parent = imageViewport
 
 	-- ปุ่มสลับไปชั้น 2 (อยู่ในกรอบกระดาษ)
 	local toggleButton = Instance.new("TextButton")
 	toggleButton.Name = "ToggleButton"
-	toggleButton.Size = UDim2.new(0, 200, 0, 40)
-	toggleButton.Position = UDim2.new(0.5, -100, 1, -55)
+	toggleButton.Size = UDim2.new(0, 160, 0, 40)
+	toggleButton.AnchorPoint = Vector2.new(1, 1)
+	toggleButton.Position = UDim2.new(0.5, -104, 1, -10)
 	toggleButton.BackgroundColor3 = Color3.fromRGB(139, 119, 80)
 	toggleButton.BorderSizePixel = 0
 	toggleButton.Font = Enum.Font.GothamBold
@@ -153,7 +154,7 @@ function NoteGui.create()
 	closeCorner.Parent = closeButton
 
 	-- ========================================
-	-- ชั้นที่ 2: พื้นหลังมืดโปร่งแสง + ข้อความขาว
+	-- ตัวอ่านโน้ตข้อความ
 	-- (แบบในรูปตัวอย่าง - เห็นฉากเกมด้านหลัง)
 	-- ========================================
 	local textOverlay = Instance.new("Frame")
@@ -194,7 +195,7 @@ function NoteGui.create()
 	-- ScrollingFrame สำหรับข้อความยาว
 	local textLayer = Instance.new("ScrollingFrame")
 	textLayer.Name = "TextLayer"
-	textLayer.Size = UDim2.new(0.75, 0, 0.7, 0)
+	textLayer.Size = UDim2.new(0.75, 0, 0.62, 0)
 	textLayer.Position = UDim2.new(0.125, 0, 0.14, 0)
 	textLayer.BackgroundTransparency = 1
 	textLayer.BorderSizePixel = 0
@@ -227,8 +228,8 @@ function NoteGui.create()
 	-- แถบด้านล่าง: ปุ่มควบคุม
 	local bottomBar = Instance.new("Frame")
 	bottomBar.Name = "BottomBar"
-	bottomBar.Size = UDim2.new(1, 0, 0, 60)
-	bottomBar.Position = UDim2.new(0, 0, 1, -60)
+	bottomBar.Size = UDim2.new(1, 0, 0, 44)
+	bottomBar.Position = UDim2.new(0, 0, 1, -76)
 	bottomBar.BackgroundTransparency = 1
 	bottomBar.ZIndex = 11
 	bottomBar.Parent = textOverlay
@@ -276,7 +277,7 @@ function NoteGui.create()
 	local hintLabel = Instance.new("TextLabel")
 	hintLabel.Name = "HintLabel"
 	hintLabel.Size = UDim2.new(1, 0, 0, 30)
-	hintLabel.Position = UDim2.new(0, 0, 1, -30)
+	hintLabel.Position = UDim2.new(0, 0, 1, -28)
 	hintLabel.BackgroundTransparency = 1
 	hintLabel.Font = Enum.Font.Gotham
 	hintLabel.TextSize = 14
@@ -302,7 +303,7 @@ function NoteGui.create()
 		Overlay = overlay,
 		NoteFrame = noteFrame,
 		ImageViewport = imageViewport,
-		HandwritingLayer = handwritingLayer,
+		ImageLayer = imageLayer,
 		ToggleButton = toggleButton,
 		CloseButton = closeButton,
 		ZoomControls = zoomControls,

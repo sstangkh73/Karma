@@ -22,6 +22,7 @@ SprintSystem.RENDER_STEP_NAME = "SprintSystemCameraEffects"
 
 SprintSystem.player = Players.LocalPlayer
 SprintSystem.CONFIG = {
+	LOBBY_PLACE_ID = 99041403537198,
 	SPRINT_KEY = Enum.KeyCode.LeftShift,
 	WALK_SPEED = 14,
 	SPRINT_SPEED = 20,
@@ -98,6 +99,7 @@ function SprintSystem:createUi()
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = true
 	screenGui.DisplayOrder = 50
+	screenGui.Enabled = game.PlaceId ~= self.CONFIG.LOBBY_PLACE_ID
 	screenGui.Parent = playerGui
 
 	local barBg = Instance.new("CanvasGroup")

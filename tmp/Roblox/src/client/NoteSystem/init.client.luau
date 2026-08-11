@@ -82,8 +82,8 @@ local function updateImageTransform()
 		math.clamp(imagePan.Y, -maxPanY, maxPanY)
 	)
 
-	gui.HandwritingLayer.Size = UDim2.fromOffset(imageWidth, imageHeight)
-	gui.HandwritingLayer.Position = UDim2.new(0.5, imagePan.X, 0.5, imagePan.Y)
+	gui.ImageLayer.Size = UDim2.fromOffset(imageWidth, imageHeight)
+	gui.ImageLayer.Position = UDim2.new(0.5, imagePan.X, 0.5, imagePan.Y)
 	gui.ZoomResetButton.Text = ("%d%%"):format(math.floor(imageZoom * 100 + 0.5))
 	gui.ZoomOutButton.AutoButtonColor = imageZoom > MIN_IMAGE_ZOOM
 	gui.ZoomInButton.AutoButtonColor = imageZoom < MAX_IMAGE_ZOOM
@@ -106,14 +106,15 @@ local function resetImageView()
 end
 
 local function applyNoteInfo(noteInfo)
-	local isImageNote = noteInfo.viewType == "image" and noteInfo.image ~= ""
+	local isImageNote = noteInfo.viewType == "image"
+	local hasHandwritingImage = typeof(noteInfo.handwritingImage) == "string" and noteInfo.handwritingImage ~= ""
+	local image = if isImageNote then noteInfo.image else noteInfo.handwritingImage
 
-	gui.HandwritingLayer.Image = if isImageNote
-		then noteInfo.image
-		else noteInfo.handwritingImage or ""
+	gui.ImageLayer.Image = image or ""
 	imageAspectRatio = noteInfo.imageAspectRatio or (2 / 3)
-	gui.ToggleButton.Visible = false
-	gui.ZoomControls.Visible = isImageNote
+	gui.ToggleButton.Visible = hasHandwritingImage
+	gui.BackButton.Visible = hasHandwritingImage
+	gui.ZoomControls.Visible = isImageNote or hasHandwritingImage
 	gui.TextLabel.Text = noteInfo.typedText or ""
 
 	if noteInfo.title and noteInfo.title ~= "" then
@@ -160,6 +161,20 @@ local function showLayer2()
 		BackgroundTransparency = 0.25,
 	}):Play()
 end
+
+local noteViewOpeners = {
+	text = function()
+		local noteInfo = currentNoteId and NoteData.getNoteById(currentNoteId)
+		if noteInfo and typeof(noteInfo.handwritingImage) == "string" and noteInfo.handwritingImage ~= "" then
+			showLayer1(true)
+		else
+			showLayer2()
+		end
+	end,
+	image = function()
+		showLayer1(true)
+	end,
+}
 
 local function hideAll()
 	if isAnimating then
@@ -228,11 +243,8 @@ local function openNote(noteId: string)
 	NoteJournal.recordRead(noteId, noteInfo)
 	applyNoteInfo(noteInfo)
 
-	if noteInfo.viewType == "image" and noteInfo.image ~= "" then
-		showLayer1(true)
-	else
-		showLayer2()
-	end
+	local openView = noteViewOpeners[noteInfo.viewType] or noteViewOpeners.text
+	openView()
 end
 
 local function closeNote()
@@ -308,7 +320,12 @@ gui.ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 gui.BackButton.MouseButton1Click:Connect(function()
-	return
+	if currentLayer == 2 and currentNoteId then
+		local noteInfo = NoteData.getNoteById(currentNoteId)
+		if noteInfo and typeof(noteInfo.handwritingImage) == "string" and noteInfo.handwritingImage ~= "" then
+			showLayer1(false)
+		end
+	end
 end)
 
 gui.CloseButton.MouseButton1Click:Connect(closeNote)

@@ -4,6 +4,47 @@ local NoteContent = require(script.Parent:WaitForChild("NoteContent"))
 local NoteData = {}
 
 local notes = NoteContent
+local validViewTypes = {
+	text = true,
+	image = true,
+}
+
+local function resolveViewType(note): string
+	local viewType = note.viewType or "text"
+	if not validViewTypes[viewType] then
+		warn(("[NoteData] Unknown viewType '%s' on %s; using text"):format(
+			tostring(viewType),
+			tostring(note.id)
+		))
+		return "text"
+	end
+
+	if viewType == "image" and (typeof(note.image) ~= "string" or note.image == "") then
+		warn(("[NoteData] Image note %s has no image; using text"):format(tostring(note.id)))
+		return "text"
+	end
+
+	return viewType
+end
+
+local function resolveImageAspectRatio(note): number
+	if typeof(note.imageAspectRatio) == "number" and note.imageAspectRatio > 0 then
+		return note.imageAspectRatio
+	end
+
+	return 2 / 3
+end
+
+local function resolveHandwritingImage(note): string
+	local handwritingImage = note.handwritingImage
+	if typeof(handwritingImage) == "string"
+		and handwritingImage ~= ""
+		and handwritingImage ~= "rbxassetid://0" then
+		return handwritingImage
+	end
+
+	return ""
+end
 
 local function resolveLocalizedText(note, fieldName: string, keyFieldName: string, languageCode: string?): string
 	local localized = note[fieldName]
@@ -33,14 +74,16 @@ local function resolveLocalizedText(note, fieldName: string, keyFieldName: strin
 end
 
 local function createResolvedNote(note, languageCode: string?)
+	local viewType = resolveViewType(note)
+
 	return {
 		id = note.id,
 		title = resolveLocalizedText(note, "title", "titleKey", languageCode),
 		typedText = resolveLocalizedText(note, "body", "typedTextKey", languageCode),
-		handwritingImage = note.handwritingImage or "",
-		viewType = note.viewType or "text",
-		image = note.image or "",
-		imageAspectRatio = note.imageAspectRatio or (2 / 3),
+		viewType = viewType,
+		image = if viewType == "image" then note.image else "",
+		handwritingImage = resolveHandwritingImage(note),
+		imageAspectRatio = resolveImageAspectRatio(note),
 	}
 end
 

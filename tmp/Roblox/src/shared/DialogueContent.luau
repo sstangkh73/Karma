@@ -103,6 +103,109 @@ return {
 			},
 		},
 
+		after_note_5 = {
+			Enabled = true,
+			Priority = 10,
+			Once = true,
+			EndDemo = {
+				CameraCutsceneAssetId = "89170980344167",
+				CameraCutsceneName = "END_DEMO",
+				CameraFramesPerSecond = 60,
+				HoldBeforeAnimation = 2.5,
+				FadeDuration = 2.5,
+				Text = "กรรม 1/10\n\nบางความจริง\nตกทอดมาพร้อมนามสกุล\n\nEND OF DEMO",
+			},
+			Triggers = {
+				{ Type = "NoteRead", Id = "note_5" },
+			},
+			Lines = {
+				{
+					Speaker = { th = "วิน", en = "Win" },
+					AutoAdvanceDelay = 0,
+					Text = {
+						th = "นี่มันนามสกุลฉัน",
+						en = "That's my last name.",
+					},
+				},
+			},
+		},
+
+		teacher_desk_locked = {
+			Enabled = true,
+			Priority = 10,
+			Once = false,
+			Lines = {
+				{
+					Speaker = { th = "ตัวเรา", en = "Me" },
+					Text = {
+						th = "ลิ้นชักล็อกอยู่... ต้องหากุญแจมาเปิด",
+						en = "The drawer is locked... I need to find its key.",
+					},
+				},
+			},
+		},
+
+		phone_battery_dead = {
+			Enabled = true,
+			Priority = 10,
+			Once = false,
+			Lines = {
+				{
+					Speaker = { th = "ตัวเรา", en = "Me" },
+					Text = {
+						th = "แบตหมด ทำไงดีทีนี้",
+						en = "The battery is dead. What do I do now?",
+					},
+				},
+			},
+		},
+
+		chada_complete_need_lighter = {
+			Enabled = true,
+			Priority = 10,
+			Once = false,
+			OnFinishedObjectiveId = "find_lighter_for_candles",
+			Lines = {
+				{
+					Speaker = { th = "ตัวเรา", en = "Me" },
+					Text = {
+						th = "อาจจะต้องจุดเทียนด้วย หาไฟแช็กมาจุดมัน",
+						en = "Maybe the candles need to be lit too. I should find a lighter.",
+					},
+				},
+			},
+		},
+
+		teacher_desk_key_collected = {
+			Enabled = true,
+			Priority = 10,
+			Once = true,
+			Lines = {
+				{
+					Speaker = { th = "ตัวเรา", en = "Me" },
+					Text = {
+						th = "กุญแจดอกนี้น่าจะใช้เปิดลิ้นชักโต๊ะครูได้",
+						en = "This key should open the teacher's desk drawer.",
+					},
+				},
+			},
+		},
+
+		teacher_desk_unlocked = {
+			Enabled = true,
+			Priority = 10,
+			Once = true,
+			Lines = {
+				{
+					Speaker = { th = "ตัวเรา", en = "Me" },
+					Text = {
+						th = "เปิดได้แล้ว... โทรศัพท์อยู่ในนี้จริงๆ",
+						en = "It opened... the phone really is in here.",
+					},
+				},
+			},
+		},
+
 		zone1_new_building = {
 			Enabled = true,
 			Priority = 5,
@@ -121,8 +224,8 @@ return {
 				{
 					Speaker = { th = "ตัวเรา", en = "Me" },
 					Text = {
-						th = "ไว้เดี๋ยวมาแวะแล้วกันตอนนี้มีเรื่องสำคัญกว่า",
-						en = "I will come back later. There is something more important right now.",
+						th = "เดี๋ยวมาแวะแล้วกัน มีสิ่งที่สำคัญกว่า",
+						en = "The teacher's desk should be inside. I should take a look.",
 					},
 				},
 			},
@@ -139,8 +242,8 @@ return {
 				{
 					Speaker = { th = "ตัวเรา", en = "Me" },
 					Text = {
-						th = "เดี๋ยวนะทำไมอาคารใหม่ถึงเป็นไม้?",
-						en = "Wait, why is the new building made of wood?",
+						th = "ทำไมเป้นไม้",
+						en = "Wait, why is the building made of wood?",
 					},
 				},
 			},
