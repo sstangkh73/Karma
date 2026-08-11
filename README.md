@@ -65,8 +65,6 @@ Repository นี้มีไฟล์ Roblox Studio สำหรับตรว
 
 ```text
 .
-├── output/
-│   └── renders/                 # ภาพเรนเดอร์สำหรับอ้างอิง
 └── tmp/
     ├── Roblox-validation.rbxlx  # Place สำหรับตรวจสอบต้นแบบ
     ├── phone-controller-build.rbxlx
