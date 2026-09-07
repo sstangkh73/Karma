@@ -80,3 +80,19 @@ Repository นี้มีไฟล์ Roblox Studio สำหรับตรว
 
 เกมมีบรรยากาศกดดัน แสงกะพริบ และเสียงดังฉับพลัน แนะนำให้สวมหูฟังเพื่อรับประสบการณ์เต็มรูปแบบ และโปรดใช้วิจารณญาณในการเล่น
 
+
+## License
+
+MIT License, see [`LICENSE`](LICENSE).
+
+Attribution: Chisanupong Injun (2026).
+[ORCID 0009-0000-2979-1916](https://orcid.org/0009-0000-2979-1916).
+
+KARMA was a team entry (Team Afterclass). This repository is the code as
+submitted; see [`EVIDENCE.md`](EVIDENCE.md) for which parts are attributable to
+this author.
+
+## Verifying the claims about this project
+
+[`EVIDENCE.md`](EVIDENCE.md) maps each claim — script count, line count, and the
+module-registry runtime architecture — to the file or command that verifies it.
